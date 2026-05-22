@@ -1,5 +1,7 @@
 Database design: Emma Williams
+
 Original database version (see my other repository): Austen Chen, Alex Williams, Emma Williams
+
 All changes made between this version and the original Torrey Database: Emma Williams
 
 Notes:
