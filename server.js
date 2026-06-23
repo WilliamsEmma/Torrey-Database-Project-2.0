@@ -38,10 +38,10 @@ const mailer = nodemailer.createTransport({
 
 // ── Database configuration ───────────────────────────────────────────────────
 const DB_CONFIG = {
-  host:     'localhost',
-  user:     'root',       // change if needed
-  password: 'process.env.MYSQL_PASSWORD',           // change to your MySQL password
-  database: 'torrey2',
+  host:     process.env.DB_HOST,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
 };
 
 let pool;
