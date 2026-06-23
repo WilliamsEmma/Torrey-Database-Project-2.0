@@ -594,3 +594,13 @@ app.delete('/api/admin/genres/:id', adminAuth, async (req, res) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Torrey Database running at http://localhost:${PORT}`));
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
