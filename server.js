@@ -40,7 +40,7 @@ const mailer = nodemailer.createTransport({
 const DB_CONFIG = {
   host:     'localhost',
   user:     'root',       // change if needed
-  password: 'CSTSstudenschoo1',           // change to your MySQL password
+  password: 'process.env.MYSQL_PASSWORD',           // change to your MySQL password
   database: 'torrey2',
 };
 
