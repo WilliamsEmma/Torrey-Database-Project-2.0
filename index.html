@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Torrey Database</title>
+  <style>
+    /* ── Reset & Base ──────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cream:     #f5f0e8;
+      --parchment: #ede6d6;
+      --border:    #c9b99a;
+      --brown:     #5c3d1e;
+      --burgundy:  #7a2030;
+      --text:      #2c1f0e;
+      --muted:     #7a6a55;
+      --tag-bg:    #e4d8c4;
+      --tag-text:  #4a2e0e;
+      --link:      #7a2030;
+      --shadow:    rgba(60,30,0,.12);
+      --admin-bg:  #1e1a16;
+      --admin-surface: #2a2420;
+      --admin-border:  #3d3530;
+      --admin-text:    #e8dfd0;
+      --admin-muted:   #9a8a7a;
+      --admin-accent:  #c4783a;
+      --admin-danger:  #c0392b;
+      --admin-width:   500px;
+    }
+    body { font-family: Georgia,'Times New Roman',serif; background:var(--cream); color:var(--text); min-height:100vh; }
+
+    /* ── Header ────────────────────────────────────────────────────────────── */
+    header {
+      background: var(--brown); color: var(--cream);
+      padding: 1.5rem 2rem; text-align: center;
+      border-bottom: 3px solid var(--burgundy); position: relative;
+    }
+    header h1 { font-size:1.9rem; font-weight:normal; letter-spacing:.04em; margin-bottom:.25rem; }
+    header p  { font-size:.85rem; color:#c9b99a; font-style:italic; }
+    .admin-header-btn {
+      position:absolute; right:1.5rem; top:50%; transform:translateY(-50%);
+      background:transparent; border:1px solid rgba(201,185,154,.45);
+      color:#c9b99a; padding:.3rem .7rem; font-family:Georgia,serif;
+      font-size:.78rem; cursor:pointer; border-radius:3px; transition:background .15s;
+    }
+    .admin-header-btn:hover { background:rgba(255,255,255,.08); }
+    .admin-header-btn.active { background:var(--admin-accent); border-color:var(--admin-accent); color:#fff; }
+
+    /* ── App wrapper ───────────────────────────────────────────────────────── */
+    #app-wrapper { display:flex; align-items:flex-start; }
+    #main-content { flex:1; min-width:0; }
+
+    /* ── Search ────────────────────────────────────────────────────────────── */
+    .search-section { max-width:700px; margin:2.5rem auto 0; padding:0 1rem; }
+    .mode-toggle {
+      display:flex; border:1px solid var(--border); border-radius:4px 4px 0 0;
+      overflow:hidden; background:var(--parchment);
+    }
+    .mode-toggle button {
+      flex:1; padding:.6rem 1rem; border:none; background:transparent;
+      font-family:Georgia,serif; font-size:.9rem; cursor:pointer; color:var(--muted);
+      transition:background .15s,color .15s; border-right:1px solid var(--border);
+    }
+    .mode-toggle button:last-child { border-right:none; }
+    .mode-toggle button.active { background:var(--brown); color:var(--cream); }
+    .search-bar {
+      display:flex; border:1px solid var(--border); border-top:none;
+      border-radius:0 0 4px 4px; overflow:hidden; background:white;
+    }
+    .search-bar input {
+      flex:1; padding:.75rem 1rem; border:none; font-family:Georgia,serif;
+      font-size:1rem; color:var(--text); background:white; outline:none;
+    }
+    .search-bar input::placeholder { color:var(--muted); font-style:italic; }
+    .search-bar button {
+      padding:.75rem 1.25rem; background:var(--burgundy); color:white;
+      border:none; font-family:Georgia,serif; font-size:.9rem; cursor:pointer; transition:background .15s;
+    }
+    .search-bar button:hover { background:var(--brown); }
+
+    /* ── Results list ──────────────────────────────────────────────────────── */
+    #results-list { max-width:700px; margin:.5rem auto 0; padding:0 1rem; }
+    .result-item {
+      padding:.75rem 1rem; border:1px solid var(--border); border-top:none;
+      background:white; cursor:pointer; transition:background .1s;
+    }
+    .result-item:first-child { border-top:1px solid var(--border); }
+    .result-item:hover { background:var(--parchment); }
+    .result-item .r-title { font-size:1rem; }
+    .result-item .r-sub   { font-size:.82rem; color:var(--muted); margin-top:.15rem; font-style:italic; }
+    .no-results { padding:1rem; text-align:center; color:var(--muted); font-style:italic; font-size:.9rem; }
+
+    /* ── Detail panel ──────────────────────────────────────────────────────── */
+    #detail { max-width:860px; margin:2rem auto 4rem; padding:0 1rem; }
+    .detail-card { background:white; border:1px solid var(--border); border-radius:4px; box-shadow:0 2px 8px var(--shadow); overflow:hidden; }
+    .detail-header { background:var(--parchment); border-bottom:1px solid var(--border); padding:1.5rem 2rem; }
+    .detail-header h2 { font-size:1.5rem; font-weight:normal; color:var(--brown); }
+    .detail-header .subtitle { font-size:.9rem; color:var(--muted); margin-top:.3rem; font-style:italic; }
+    .detail-header .office-link {
+      display:inline-block; margin-top:.75rem; padding:.4rem .9rem;
+      background:var(--burgundy); color:white; text-decoration:none;
+      font-size:.85rem; border-radius:3px; font-style:normal;
+    }
+    .detail-header .office-link:hover { background:var(--brown); }
+    .detail-body { padding:1.5rem 2rem; }
+    .section { margin-bottom:2rem; }
+    .section:last-child { margin-bottom:0; }
+    .section-title {
+      font-size:.75rem; font-weight:bold; letter-spacing:.1em; text-transform:uppercase;
+      color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:.4rem; margin-bottom:1rem;
+    }
+    .professor-list { display:flex; flex-direction:column; gap:.75rem; }
+    .professor-entry { display:flex; align-items:baseline; gap:.75rem; flex-wrap:wrap; }
+    .professor-name { color:var(--link); text-decoration:underline; cursor:pointer; font-size:.95rem; }
+    .professor-name:hover { color:var(--brown); }
+    .professor-genres { font-size:.8rem; color:var(--muted); font-style:italic; }
+    .oh-link {
+      font-size:.78rem; color:var(--burgundy); text-decoration:none;
+      border:1px solid var(--burgundy); border-radius:3px; padding:.1rem .45rem; white-space:nowrap;
+    }
+    .oh-link:hover { background:var(--burgundy); color:white; }
+    .lecture-list { display:flex; flex-direction:column; gap:1rem; }
+    .lecture-entry { border-left:3px solid var(--border); padding-left:1rem; }
+    .lecture-entry .lec-title { font-size:.95rem; color:var(--text); }
+    .lecture-entry a.lec-title { color:var(--link); text-decoration:none; }
+    .lecture-entry a.lec-title:hover { text-decoration:underline; }
+    .lecture-entry .lec-meta { font-size:.8rem; color:var(--muted); margin-top:.2rem; font-style:italic; }
+    .lecture-entry .lec-books { margin-top:.35rem; display:flex; flex-wrap:wrap; gap:.35rem; }
+    .book-chip {
+      background:var(--tag-bg); color:var(--tag-text); font-size:.78rem;
+      padding:.15rem .5rem; border-radius:3px; border:1px solid var(--border);
+      cursor:pointer; font-style:normal;
+    }
+    .book-chip:hover { background:var(--parchment); }
+    .back-btn { display:inline-block; margin-bottom:1rem; color:var(--muted); font-size:.85rem; cursor:pointer; text-decoration:underline; }
+    .back-btn:hover { color:var(--brown); }
+    .loading   { color:var(--muted); font-style:italic; padding:1rem 0; }
+    .error-msg { color:var(--burgundy); font-style:italic; padding:1rem 0; }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       ADMIN PANEL
+    ════════════════════════════════════════════════════════════════════════ */
+    #admin-panel {
+      width: var(--admin-width); min-width: var(--admin-width);
+      background: var(--admin-bg); color: var(--admin-text);
+      border-left: 2px solid var(--admin-border);
+      position: sticky; top: 0; height: 100vh; overflow-y: auto;
+      display: none; flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    #admin-panel.visible { display: flex; }
+
+    .ap-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:.9rem 1rem; background:var(--admin-surface);
+      border-bottom:1px solid var(--admin-border); flex-shrink:0;
+    }
+    .ap-header span { font-size:.85rem; font-weight:600; color:var(--admin-accent); letter-spacing:.05em; text-transform:uppercase; }
+    .ap-logout {
+      background:transparent; border:1px solid var(--admin-border); color:var(--admin-muted);
+      padding:.25rem .6rem; font-size:.75rem; cursor:pointer; border-radius:3px;
+    }
+    .ap-logout:hover { border-color:var(--admin-danger); color:var(--admin-danger); }
+
+    .ap-chpw-body {
+      display:none; padding:.65rem 1rem .75rem;
+      border-bottom:1px solid var(--admin-border); background:var(--admin-bg); flex-shrink:0;
+    }
+    .ap-chpw-body.visible { display:block; }
+    .ap-chpw-body .form-group label { font-size:.72rem; }
+    .ap-chpw-body .form-input { padding:.28rem .5rem; font-size:.8rem; }
+    .ap-chpw-msg { font-size:.73rem; min-height:1rem; }
+    .ap-chpw-msg.ok  { color:#7ec8a4; }
+    .ap-chpw-msg.err { color:var(--admin-danger); }
+
+    .ap-tabs {
+      display:flex; border-bottom:1px solid var(--admin-border); flex-shrink:0;
+    }
+    .ap-tab {
+      flex:1; padding:.55rem .4rem; background:transparent; border:none;
+      color:var(--admin-muted); font-size:.78rem; cursor:pointer; transition:color .15s,background .15s;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    }
+    .ap-tab:hover { color:var(--admin-text); }
+    .ap-tab.active { color:var(--admin-accent); border-bottom:2px solid var(--admin-accent); background:rgba(196,120,58,.07); }
+
+    .ap-toolbar {
+      display:flex; gap:.5rem; padding:.75rem 1rem; border-bottom:1px solid var(--admin-border);
+      flex-shrink:0;
+    }
+    .ap-filter {
+      flex:1; background:var(--admin-surface); border:1px solid var(--admin-border);
+      color:var(--admin-text); padding:.4rem .6rem; font-size:.8rem; border-radius:3px; outline:none;
+    }
+    .ap-filter::placeholder { color:var(--admin-muted); }
+    .ap-filter:focus { border-color:var(--admin-accent); }
+    .ap-add-btn {
+      background:var(--admin-accent); color:white; border:none; padding:.4rem .8rem;
+      font-size:.78rem; cursor:pointer; border-radius:3px; white-space:nowrap;
+    }
+    .ap-add-btn:hover { filter:brightness(1.1); }
+
+    .ap-list { flex:1; overflow-y:auto; padding:.5rem 0; }
+    .ap-item {
+      display:flex; align-items:center; gap:.5rem;
+      padding:.55rem 1rem; border-bottom:1px solid var(--admin-border);
+      transition:background .1s;
+    }
+    .ap-item:hover { background:var(--admin-surface); }
+    .ap-item-info { flex:1; min-width:0; }
+    .ap-item-title { font-size:.82rem; color:var(--admin-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ap-item-sub   { font-size:.72rem; color:var(--admin-muted); margin-top:.1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ap-item-badge {
+      font-size:.68rem; background:rgba(196,120,58,.2); color:var(--admin-accent);
+      padding:.1rem .35rem; border-radius:2px; white-space:nowrap; flex-shrink:0;
+    }
+    .ap-edit-btn, .ap-del-btn {
+      background:transparent; border:1px solid var(--admin-border); color:var(--admin-muted);
+      padding:.2rem .45rem; font-size:.72rem; cursor:pointer; border-radius:3px; flex-shrink:0;
+    }
+    .ap-edit-btn:hover { border-color:var(--admin-accent); color:var(--admin-accent); }
+    .ap-del-btn:hover  { border-color:var(--admin-danger); color:var(--admin-danger); }
+    .ap-loading { padding:2rem 1rem; text-align:center; color:var(--admin-muted); font-size:.85rem; }
+
+    /* ── Admin Modal ───────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,.65);
+      display:flex; align-items:center; justify-content:center; z-index:1000; padding:1rem;
+    }
+    .modal-box {
+      background:var(--admin-surface); border:1px solid var(--admin-border);
+      border-radius:6px; width:100%; max-width:560px; max-height:90vh;
+      display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,.5);
+    }
+    .modal-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:.9rem 1.25rem; border-bottom:1px solid var(--admin-border); flex-shrink:0;
+    }
+    .modal-header h3 { font-size:.95rem; font-weight:600; color:var(--admin-text); font-family:-apple-system,sans-serif; }
+    .modal-close {
+      background:transparent; border:none; color:var(--admin-muted); font-size:1.3rem;
+      cursor:pointer; line-height:1; padding:.1rem .3rem;
+    }
+    .modal-close:hover { color:var(--admin-text); }
+    .modal-body { flex:1; overflow-y:auto; padding:1.25rem; }
+    .modal-footer {
+      display:flex; gap:.5rem; justify-content:flex-end;
+      padding:.9rem 1.25rem; border-top:1px solid var(--admin-border); flex-shrink:0;
+    }
+    .btn-cancel {
+      background:transparent; border:1px solid var(--admin-border); color:var(--admin-muted);
+      padding:.45rem .9rem; font-size:.82rem; cursor:pointer; border-radius:3px;
+    }
+    .btn-cancel:hover { color:var(--admin-text); border-color:var(--admin-text); }
+    .btn-save {
+      background:var(--admin-accent); color:white; border:none;
+      padding:.45rem 1rem; font-size:.82rem; cursor:pointer; border-radius:3px;
+    }
+    .btn-save:hover { filter:brightness(1.1); }
+    .btn-danger {
+      background:var(--admin-danger); color:white; border:none;
+      padding:.45rem 1rem; font-size:.82rem; cursor:pointer; border-radius:3px;
+    }
+    .btn-danger:hover { filter:brightness(1.1); }
+
+    /* ── Form elements ─────────────────────────────────────────────────────── */
+    .form-group { margin-bottom:1rem; }
+    .form-group label {
+      display:block; font-size:.75rem; color:var(--admin-muted); margin-bottom:.35rem;
+      text-transform:uppercase; letter-spacing:.05em;
+    }
+    .form-group label small { text-transform:none; letter-spacing:0; font-size:.75rem; color:var(--admin-accent); }
+    .form-input {
+      width:100%; background:var(--admin-bg); border:1px solid var(--admin-border);
+      color:var(--admin-text); padding:.5rem .7rem; font-size:.85rem; border-radius:3px; outline:none;
+    }
+    .form-input:focus { border-color:var(--admin-accent); }
+    .form-input::placeholder { color:var(--admin-muted); }
+    .id-preview {
+      background:var(--admin-bg); border:1px solid var(--admin-border); border-radius:3px;
+      padding:.5rem .7rem; font-size:.85rem; color:var(--admin-accent); font-family:monospace;
+      letter-spacing:.08em;
+    }
+    .id-warn { font-size:.75rem; color:var(--admin-danger); margin-top:.3rem; }
+    .form-check { display:flex; align-items:center; gap:.5rem; cursor:pointer; }
+    .form-check input { width:14px; height:14px; accent-color:var(--admin-accent); cursor:pointer; }
+    .form-check span { font-size:.85rem; color:var(--admin-text); }
+
+    /* ── Multi-select ──────────────────────────────────────────────────────── */
+    .ms-wrap { border:1px solid var(--admin-border); border-radius:3px; overflow:hidden; }
+    .ms-filter {
+      width:100%; background:var(--admin-surface); border:none; border-bottom:1px solid var(--admin-border);
+      color:var(--admin-text); padding:.4rem .6rem; font-size:.78rem; outline:none;
+    }
+    .ms-filter::placeholder { color:var(--admin-muted); }
+    .ms-list { max-height:160px; overflow-y:auto; background:var(--admin-bg); }
+    .ms-item {
+      display:flex; align-items:center; gap:.5rem; padding:.35rem .7rem;
+      cursor:pointer; transition:background .1s;
+    }
+    .ms-item:hover { background:var(--admin-surface); }
+    .ms-item input { accent-color:var(--admin-accent); flex-shrink:0; }
+    .ms-item span  { font-size:.78rem; color:var(--admin-text); }
+    .ms-empty { padding:.5rem .7rem; font-size:.78rem; color:var(--admin-muted); font-style:italic; }
+
+    /* ── Typeahead select ──────────────────────────────────────────────────── */
+    .ts-wrap { position:relative; border:1px solid var(--admin-border); border-radius:3px; background:var(--admin-bg); min-height:36px; padding:4px; }
+    .ts-chips { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:2px; }
+    .ts-chip { display:inline-flex; align-items:center; gap:4px; background:rgba(196,120,58,.15); color:var(--admin-accent); font-size:.73rem; padding:.18rem .45rem; border-radius:3px; border:1px solid rgba(196,120,58,.3); }
+    .ts-chip-remove { background:transparent; border:none; color:var(--admin-muted); cursor:pointer; font-size:.9rem; padding:0; line-height:1; }
+    .ts-chip-remove:hover { color:var(--admin-danger); }
+    .ts-input { background:transparent; border:none; color:var(--admin-text); font-size:.82rem; outline:none; width:100%; padding:.25rem .3rem; }
+    .ts-input::placeholder { color:var(--admin-muted); }
+    .ts-dropdown { position:absolute; left:-1px; right:-1px; top:calc(100% + 1px); background:var(--admin-surface); border:1px solid var(--admin-accent); border-radius:0 0 3px 3px; z-index:200; max-height:180px; overflow-y:auto; }
+    .ts-option { padding:.38rem .7rem; font-size:.78rem; color:var(--admin-text); cursor:pointer; transition:background .1s; }
+    .ts-option:hover { background:var(--admin-bg); color:var(--admin-accent); }
+    .ts-no-results { padding:.38rem .7rem; font-size:.78rem; color:var(--admin-muted); font-style:italic; }
+
+    /* ── Admin login modal ─────────────────────────────────────────────────── */
+    #login-modal .modal-box { max-width:340px; }
+    .login-error { color:var(--admin-danger); font-size:.8rem; margin-top:.5rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Torrey Database</h1>
+  <p>Books &bull; Lectures &bull; Faculty</p>
+  <button class="admin-header-btn" id="admin-header-btn" onclick="adminHeaderClick()">Admin</button>
+</header>
+
+<div id="app-wrapper">
+  <!-- ── Main public content ── -->
+  <div id="main-content">
+    <div class="search-section">
+      <div class="mode-toggle">
+        <button id="btn-books" class="active" onclick="setMode('books')">Search Books</button>
+        <button id="btn-professors" onclick="setMode('professors')">Search Professors</button>
+      </div>
+      <div class="search-bar">
+        <input id="search-input" type="text" placeholder="Search by title or author…" autocomplete="off" />
+        <button onclick="doSearch()">Search</button>
+      </div>
+    </div>
+    <div id="results-list"></div>
+    <div id="detail"></div>
+  </div>
+
+  <!-- ── Admin side panel ── -->
+  <div id="admin-panel">
+    <div class="ap-header">
+      <span>Admin Panel</span>
+      <div style="display:flex;gap:.4rem;align-items:center">
+        <button class="ap-logout" id="chpw-toggle" onclick="toggleChpw()">Change Password</button>
+        <button class="ap-logout" onclick="adminLogout()">Log Out</button>
+      </div>
+    </div>
+    <div class="ap-chpw-body" id="chpw-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;align-items:end">
+        <div class="form-group" style="margin:0">
+          <label>Current Password</label>
+          <input class="form-input" id="chpw-current" type="password" autocomplete="current-password" />
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>New Password</label>
+          <input class="form-input" id="chpw-new" type="password" autocomplete="new-password" />
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Confirm New</label>
+          <input class="form-input" id="chpw-confirm" type="password" autocomplete="new-password"
+                 onkeydown="if(event.key==='Enter')submitChpw()" />
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:.7rem;margin-top:.5rem">
+        <button class="ap-add-btn" onclick="submitChpw()">Update Password</button>
+        <div class="ap-chpw-msg" id="chpw-msg"></div>
+      </div>
+    </div>
+    <div class="ap-tabs">
+      <button class="ap-tab active" data-tab="books"      onclick="setAdminTab('books')">Books</button>
+      <button class="ap-tab"        data-tab="professors"  onclick="setAdminTab('professors')">Professors</button>
+      <button class="ap-tab"        data-tab="lectures"    onclick="setAdminTab('lectures')">Lectures</button>
+      <button class="ap-tab"        data-tab="genres"      onclick="setAdminTab('genres')">Genres</button>
+    </div>
+    <div class="ap-toolbar">
+      <input class="ap-filter" id="ap-filter" type="text" placeholder="Filter…" oninput="filterAdminList(this.value)" />
+      <button class="ap-add-btn" onclick="openAddModal()">+ Add New</button>
+    </div>
+    <div class="ap-list" id="ap-list"></div>
+  </div>
+</div>
+
+<!-- ── Admin login modal ── -->
+<div id="login-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Admin Login</h3>
+      <button class="modal-close" onclick="closeLoginModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Password</label>
+        <input class="form-input" id="login-pw" type="password" placeholder="Enter admin password"
+               onkeydown="if(event.key==='Enter')submitLogin()" />
+        <div class="login-error" id="login-error"></div>
+        <div style="margin-top:.5rem">
+          <button type="button" onclick="forgotPassword()"
+                  style="background:none;border:none;color:var(--admin-muted);font-size:.75rem;cursor:pointer;padding:0;text-decoration:underline;">
+            Forgot password?
+          </button>
+          <span id="forgot-msg" style="font-size:.75rem;margin-left:.5rem"></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeLoginModal()">Cancel</button>
+      <button class="btn-save" onclick="submitLogin()">Log In</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Admin add/edit modal ── -->
+<div id="edit-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="edit-modal-title">Edit</h3>
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+    <div class="modal-body" id="edit-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="btn-save"   onclick="submitEditModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete confirm modal ── -->
+<div id="confirm-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:380px">
+    <div class="modal-header">
+      <h3>Confirm Deletion</h3>
+      <button class="modal-close" onclick="closeConfirm()">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg" style="font-size:.85rem;color:var(--admin-text);line-height:1.5;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel"  onclick="closeConfirm()">Cancel</button>
+      <button class="btn-danger"  id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  PUBLIC SEARCH
+// ════════════════════════════════════════════════════════════════════════════
+
+let searchMode = 'books';
+
+function setMode(m) {
+  searchMode = m;
+  document.getElementById('btn-books').classList.toggle('active', m === 'books');
+  document.getElementById('btn-professors').classList.toggle('active', m === 'professors');
+  document.getElementById('search-input').placeholder =
+    m === 'books' ? 'Search by title or author…' : 'Search by professor name…';
+  document.getElementById('results-list').innerHTML = '';
+  document.getElementById('detail').innerHTML = '';
+  document.getElementById('search-input').focus();
+}
+
+document.getElementById('search-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+async function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (!q) return;
+  const listEl   = document.getElementById('results-list');
+  const detailEl = document.getElementById('detail');
+  listEl.innerHTML   = '<div class="no-results loading">Searching…</div>';
+  detailEl.innerHTML = '';
+
+  const ep = searchMode === 'books'
+    ? `/api/books?search=${encodeURIComponent(q)}`
+    : `/api/professors?search=${encodeURIComponent(q)}`;
+
+  try {
+    const data = await (await fetch(ep)).json();
+    if (!data.length) { listEl.innerHTML = '<div class="no-results">No results found.</div>'; return; }
+    listEl.innerHTML = data.map(item =>
+      searchMode === 'books'
+        ? `<div class="result-item" onclick="showBook('${esc(item.id)}')">
+             <div class="r-title">${esc(item.title)}</div>
+             <div class="r-sub">${esc(item.author || 'Unknown author')}</div>
+           </div>`
+        : `<div class="result-item" onclick="showProfessor('${esc(item.id)}')">
+             <div class="r-title">${esc(item.name)}</div>
+             <div class="r-sub">Current faculty</div>
+           </div>`
+    ).join('');
+  } catch (err) {
+    listEl.innerHTML = `<div class="no-results error-msg">Error: ${err.message}</div>`;
+  }
+}
+
+async function showBook(id) {
+  const detailEl = document.getElementById('detail');
+  detailEl.innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('results-list').innerHTML = '';
+  window.scrollTo({ top: detailEl.offsetTop - 20, behavior: 'smooth' });
+  try {
+    const b = await (await fetch(`/api/books/${encodeURIComponent(id)}`)).json();
+    const professorSection = b.connectedProfessors.length
+      ? `<div class="section">
+           <div class="section-title">Connected Faculty</div>
+           <div class="professor-list">
+             ${b.connectedProfessors.map(p => `
+               <div class="professor-entry">
+                 <span class="professor-name" onclick="showProfessor('${esc(p.id)}')">${esc(p.name)}</span>
+                 <span class="professor-genres">${p.genres.map(g => esc(g.genre_name)).join(', ')}</span>
+                 ${p.office_hours ? `<a class="oh-link" href="${esc(p.office_hours)}" target="_blank" rel="noopener">Book Office Hours</a>` : ''}
+               </div>`).join('')}
+           </div>
+         </div>` : '';
+
+    const lectureSection = b.lectures.length
+      ? `<div class="section">
+           <div class="section-title">Lectures (${b.lectures.length})</div>
+           <div class="lecture-list">
+             ${b.lectures.map(l => `
+               <div class="lecture-entry">
+                 ${l.link
+                   ? `<a class="lec-title" href="${esc(l.link)}" target="_blank" rel="noopener">${esc(l.title)}</a>`
+                   : `<span class="lec-title">${esc(l.title)}</span>`}
+                 <div class="lec-meta">${esc(l.dates||'')}${l.dates&&l.professor?' &bull; ':''}${esc(l.professor||'')}</div>
+               </div>`).join('')}
+           </div>
+         </div>` : '';
+
+    detailEl.innerHTML = `
+      <span class="back-btn" onclick="clearDetail()">← Back to results</span>
+      <div class="detail-card">
+        <div class="detail-header">
+          <h2>${esc(b.title)}</h2>
+          <div class="subtitle">${esc(b.author || 'Unknown author')}</div>
+        </div>
+        <div class="detail-body">
+          ${professorSection}${lectureSection}
+          ${!professorSection && !lectureSection ? '<div class="loading">No additional information available.</div>' : ''}
+        </div>
+      </div>`;
+  } catch (err) {
+    detailEl.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;
+  }
+}
+
+async function showProfessor(id) {
+  const detailEl = document.getElementById('detail');
+  detailEl.innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('results-list').innerHTML = '';
+  window.scrollTo({ top: detailEl.offsetTop - 20, behavior: 'smooth' });
+  try {
+    const p = await (await fetch(`/api/professors/${encodeURIComponent(id)}`)).json();
+    const genreSection = p.genres.length
+      ? `<div class="section">
+           <div class="section-title">Areas of Speciality</div>
+           <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+             ${p.genres.map(g => `<span style="background:var(--tag-bg);color:var(--tag-text);font-size:.8rem;padding:.25rem .6rem;border-radius:3px;border:1px solid var(--border)">${esc(g.genre_name)}</span>`).join('')}
+           </div>
+         </div>` : '';
+
+    const lectureSection = p.lectures.length
+      ? `<div class="section">
+           <div class="section-title">Lectures (${p.lectures.length})</div>
+           <div class="lecture-list">
+             ${p.lectures.map(l => `
+               <div class="lecture-entry">
+                 ${l.link
+                   ? `<a class="lec-title" href="${esc(l.link)}" target="_blank" rel="noopener">${esc(l.title)}</a>`
+                   : `<span class="lec-title">${esc(l.title)}</span>`}
+                 <div class="lec-meta">${esc(l.dates||'')}</div>
+                 ${l.books.length
+                   ? `<div class="lec-books">${l.books.map(bk =>
+                       `<span class="book-chip" onclick="showBook('${esc(bk.id)}')" title="${esc(bk.author)}">${esc(bk.title)}</span>`
+                     ).join('')}</div>` : ''}
+               </div>`).join('')}
+           </div>
+         </div>` : '';
+
+    detailEl.innerHTML = `
+      <span class="back-btn" onclick="clearDetail()">← Back to results</span>
+      <div class="detail-card">
+        <div class="detail-header">
+          <h2>${esc(p.name)}</h2>
+          <div class="subtitle">Current Faculty</div>
+          ${p.office_hours ? `<a class="office-link" href="${esc(p.office_hours)}" target="_blank" rel="noopener">Book Office Hours</a>` : ''}
+        </div>
+        <div class="detail-body">${genreSection}${lectureSection}</div>
+      </div>`;
+  } catch (err) {
+    detailEl.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;
+  }
+}
+
+function clearDetail() {
+  document.getElementById('detail').innerHTML = '';
+  doSearch();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ADMIN AUTH
+// ════════════════════════════════════════════════════════════════════════════
+
+let adminToken = null;
+let adminTab   = 'books';
+let adminListData = [];   // current full list for the active tab
+let refCache = {};        // cached reference lists
+
+function adminHeaderClick() {
+  if (adminToken) adminLogout();
+  else openLoginModal();
+}
+
+function openLoginModal() {
+  document.getElementById('login-pw').value    = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('forgot-msg').textContent  = '';
+  document.getElementById('forgot-msg').style.color  = '';
+  document.getElementById('login-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('login-pw').focus(), 50);
+}
+
+async function forgotPassword() {
+  const msgEl = document.getElementById('forgot-msg');
+  msgEl.style.color = '';
+  msgEl.textContent = 'Sending…';
+  try {
+    const res  = await fetch('/api/forgot-password', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) { msgEl.style.color = 'var(--admin-danger)'; msgEl.textContent = data.error; return; }
+    msgEl.style.color = '#7ec8a4';
+    msgEl.textContent = 'Password sent to emmawillsd@gmail.com.';
+  } catch {
+    msgEl.style.color = 'var(--admin-danger)';
+    msgEl.textContent = 'Connection error.';
+  }
+}
+function closeLoginModal() {
+  document.getElementById('login-modal').style.display = 'none';
+}
+
+async function submitLogin() {
+  const pw = document.getElementById('login-pw').value;
+  try {
+    const res  = await fetch('/api/admin/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password: pw }),
+    });
+    if (!res.ok) {
+      document.getElementById('login-error').textContent = 'Incorrect password.';
+      return;
+    }
+    const data = await res.json();
+    adminToken = data.token;
+    closeLoginModal();
+    document.getElementById('admin-panel').classList.add('visible');
+    document.getElementById('admin-header-btn').classList.add('active');
+    document.getElementById('admin-header-btn').textContent = 'Admin ✓';
+    loadAdminTab(adminTab);
+  } catch (err) {
+    document.getElementById('login-error').textContent = 'Connection error.';
+  }
+}
+
+async function adminLogout() {
+  if (adminToken) {
+    await adminFetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
+    adminToken = null;
+    refCache   = {};
+  }
+  document.getElementById('admin-panel').classList.remove('visible');
+  document.getElementById('admin-header-btn').classList.remove('active');
+  document.getElementById('admin-header-btn').textContent = 'Admin';
+  // collapse change-password section on logout
+  document.getElementById('chpw-body').classList.remove('visible');
+  document.getElementById('chpw-toggle').classList.remove('open');
+  ['chpw-current','chpw-new','chpw-confirm'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('chpw-msg').textContent = '';
+}
+
+function toggleChpw() {
+  document.getElementById('chpw-body').classList.toggle('visible');
+  document.getElementById('chpw-msg').textContent = '';
+}
+
+async function submitChpw() {
+  const current = document.getElementById('chpw-current').value;
+  const newPw   = document.getElementById('chpw-new').value;
+  const confirm = document.getElementById('chpw-confirm').value;
+  const msgEl   = document.getElementById('chpw-msg');
+  msgEl.className = 'ap-chpw-msg';
+  msgEl.textContent = '';
+
+  if (!current || !newPw || !confirm) { msgEl.className='ap-chpw-msg err'; msgEl.textContent='All fields are required.'; return; }
+  if (newPw !== confirm)               { msgEl.className='ap-chpw-msg err'; msgEl.textContent='New passwords do not match.'; return; }
+  if (newPw.length < 4)                { msgEl.className='ap-chpw-msg err'; msgEl.textContent='New password must be at least 4 characters.'; return; }
+
+  try {
+    await adminFetch('/api/admin/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword: current, newPassword: newPw })
+    });
+    msgEl.className = 'ap-chpw-msg ok';
+    msgEl.textContent = 'Password updated successfully.';
+    ['chpw-current','chpw-new','chpw-confirm'].forEach(id => document.getElementById(id).value = '');
+  } catch (err) {
+    msgEl.className = 'ap-chpw-msg err';
+    msgEl.textContent = err.message || 'Error updating password.';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ADMIN HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+function adminFetch(url, opts = {}) {
+  return fetch(url, {
+    ...opts,
+    headers: { 'Content-Type':'application/json', 'x-admin-token': adminToken, ...(opts.headers||{}) },
+    body: opts.body ? (typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body)) : undefined,
+  });
+}
+
+async function fetchRef(type) {
+  if (!refCache[type]) {
+    refCache[type] = await (await adminFetch(`/api/admin/ref/${type}`)).json();
+  }
+  return refCache[type];
+}
+function invalidateRef(type) { delete refCache[type]; }
+
+async function nextId(type) {
+  return (await (await adminFetch(`/api/admin/next-id/${type}`)).json()).id;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ADMIN TABS
+// ════════════════════════════════════════════════════════════════════════════
+
+function setAdminTab(tab) {
+  adminTab = tab;
+  document.querySelectorAll('.ap-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.getElementById('ap-filter').value = '';
+  loadAdminTab(tab);
+}
+
+async function loadAdminTab(tab) {
+  const listEl = document.getElementById('ap-list');
+  listEl.innerHTML = '<div class="ap-loading">Loading…</div>';
+  try {
+    const data = await (await adminFetch(`/api/admin/${tab}`)).json();
+    adminListData = data;
+    renderAdminList(data);
+  } catch (err) {
+    listEl.innerHTML = `<div class="ap-loading" style="color:var(--admin-danger)">Error: ${err.message}</div>`;
+  }
+}
+
+function filterAdminList(q) {
+  q = q.toLowerCase();
+  const filtered = q
+    ? adminListData.filter(item => {
+        const searchable = [item.title, item.name, item.author, item.professor, item.dates]
+          .filter(Boolean).join(' ').toLowerCase();
+        return searchable.includes(q);
+      })
+    : adminListData;
+  renderAdminList(filtered);
+}
+
+function renderAdminList(data) {
+  const listEl = document.getElementById('ap-list');
+  if (!data.length) { listEl.innerHTML = '<div class="ap-loading">No items found.</div>'; return; }
+
+  listEl.innerHTML = data.map(item => {
+    if (adminTab === 'books') {
+      const sub = `${esc(item.author || '')} · ${item.genre_count} genre${item.genre_count!==1?'s':''} · ${item.lecture_count} lecture${item.lecture_count!==1?'s':''}`;
+      return apItem(item.id, item.title, sub, item.id);
+    }
+    if (adminTab === 'professors') {
+      const badge = item.is_current ? '● Current' : '';
+      const sub   = `${item.genre_count} genre${item.genre_count!==1?'s':''}`;
+      return apItem(item.id, item.name, sub, badge);
+    }
+    if (adminTab === 'lectures') {
+      const sub = `${esc(item.professor||'')} · ${esc(item.dates||'')} · ${item.book_count} book${item.book_count!==1?'s':''}`;
+      return apItem(item.id, item.title, sub, item.id);
+    }
+    if (adminTab === 'genres') {
+      const sub = `${item.book_count} book${item.book_count!==1?'s':''} · ${item.professor_count} professor${item.professor_count!==1?'s':''}`;
+      return apItem(item.id, item.name, sub, item.id);
+    }
+    return '';
+  }).join('');
+}
+
+function apItem(id, title, sub, badge) {
+  return `<div class="ap-item">
+    <div class="ap-item-info">
+      <div class="ap-item-title">${esc(title)}</div>
+      <div class="ap-item-sub">${sub}</div>
+    </div>
+    ${badge ? `<span class="ap-item-badge">${esc(badge)}</span>` : ''}
+    <button class="ap-edit-btn" onclick="openEditModal('${esc(id)}')">Edit</button>
+    <button class="ap-del-btn"  onclick="openDeleteConfirm('${esc(id)}')">Del</button>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ADD / EDIT MODAL
+// ════════════════════════════════════════════════════════════════════════════
+
+let editingId   = null;  // null = adding new
+let modalSaveCallback = null;
+
+async function openAddModal() {
+  editingId = null;
+  document.getElementById('edit-modal-title').textContent =
+    { books:'Add Book', professors:'Add Professor', lectures:'Add Lecture', genres:'Add Genre' }[adminTab];
+  document.getElementById('edit-modal-body').innerHTML = '<div class="ap-loading">Loading…</div>';
+  document.getElementById('edit-modal').style.display = 'flex';
+
+  if (adminTab === 'books')      await renderBookForm(null);
+  if (adminTab === 'professors') await renderProfessorForm(null);
+  if (adminTab === 'lectures')   await renderLectureForm(null);
+  if (adminTab === 'genres')     await renderGenreForm(null);
+}
+
+async function openEditModal(id) {
+  editingId = id;
+  document.getElementById('edit-modal-title').textContent =
+    { books:'Edit Book', professors:'Edit Professor', lectures:'Edit Lecture', genres:'Edit Genre' }[adminTab];
+  document.getElementById('edit-modal-body').innerHTML = '<div class="ap-loading">Loading…</div>';
+  document.getElementById('edit-modal').style.display = 'flex';
+
+  try {
+    const data = await (await adminFetch(`/api/admin/${adminTab}/${encodeURIComponent(id)}`)).json();
+    if (adminTab === 'books')      await renderBookForm(data);
+    if (adminTab === 'professors') await renderProfessorForm(data);
+    if (adminTab === 'lectures')   await renderLectureForm(data);
+    if (adminTab === 'genres')     await renderGenreForm(data);
+  } catch (err) {
+    document.getElementById('edit-modal-body').innerHTML =
+      `<div class="ap-loading" style="color:var(--admin-danger)">Error: ${err.message}</div>`;
+  }
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  editingId = null;
+}
+
+async function submitEditModal() {
+  if (adminTab === 'books')      await saveBook();
+  if (adminTab === 'professors') await saveProfessor();
+  if (adminTab === 'lectures')   await saveLecture();
+  if (adminTab === 'genres')     await saveGenre();
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  BOOK FORM
+// ════════════════════════════════════════════════════════════════════════════
+
+function generateBookId(author, title) {
+  const lastName = (author.includes(',') ? author.split(',')[0] : author).trim();
+  const authorPart = lastName
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
+
+  let t = title.trim();
+  if (/^the\s/i.test(t)) t = t.slice(4);
+  else if (/^a\s/i.test(t)) t = t.slice(2);
+
+  const titlePart = t
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z]/g, '').substring(0, 5).toUpperCase();
+
+  return authorPart + titlePart;
+}
+
+async function renderBookForm(data) {
+  const [allGenres, allLectures] = await Promise.all([fetchRef('genres'), fetchRef('lectures')]);
+  const selGenres   = data?.genre_ids   || [];
+  const selLectures = data?.lecture_ids || [];
+
+  const isNew = !data;
+  document.getElementById('edit-modal-body').innerHTML = `
+    ${isNew ? `<div class="form-group">
+      <label>Author <small>— use "Last name, First name" format</small></label>
+      <input class="form-input" id="f-author" value="" placeholder="e.g. Austen, Jane" oninput="updateBookIdPreview()" required />
+    </div>` : `<div class="form-group">
+      <label>Author</label>
+      <input class="form-input" id="f-author" value="${esc(data.author||'')}" required />
+    </div>`}
+    <div class="form-group">
+      <label>Title</label>
+      <input class="form-input" id="f-title" value="${esc(data?.title||'')}"
+             ${isNew ? 'oninput="updateBookIdPreview()"' : ''} placeholder="Book title" required />
+    </div>
+    <div class="form-group">
+      <label>ID ${isNew ? '(auto-generated)' : ''}</label>
+      <div class="id-preview" id="book-id-preview">${isNew ? '—' : esc(data.id)}</div>
+      <div class="id-warn" id="book-id-warn"></div>
+    </div>
+    <div class="form-group">
+      <label>Genres</label>
+      ${buildMultiSelect('f-genres', allGenres.map(g => ({ id: g.id, label: g.name })), selGenres)}
+    </div>
+    <div class="form-group">
+      <label>Linked Lectures</label>
+      ${buildTypeaheadSelect('f-lectures', allLectures.map(l => ({ id: l.id, label: `${l.title} (${l.dates||''})` })), selLectures)}
+    </div>`;
+}
+
+async function updateBookIdPreview() {
+  const author = document.getElementById('f-author')?.value || '';
+  const title  = document.getElementById('f-title')?.value  || '';
+  const preview = document.getElementById('book-id-preview');
+  const warn    = document.getElementById('book-id-warn');
+  if (!author || !title) { preview.textContent = '—'; warn.textContent = ''; return; }
+  const id = generateBookId(author, title);
+  preview.textContent = id;
+  warn.textContent = '';
+  if (id.length === 8) {
+    const { exists } = await (await adminFetch(`/api/admin/check-book-id/${id}`)).json();
+    if (exists) warn.textContent = '⚠ This ID already exists. Adjust the title or author slightly.';
+  }
+}
+
+async function saveBook() {
+  const author = document.getElementById('f-author').value.trim();
+  const title  = document.getElementById('f-title').value.trim();
+  if (!author || !title) { alert('Author and title are required.'); return; }
+
+  const genre_ids   = getMultiSelectValues('f-genres');
+  const lecture_ids = getTypeaheadValues('f-lectures');
+
+  try {
+    if (editingId) {
+      await adminFetch(`/api/admin/books/${encodeURIComponent(editingId)}`, {
+        method: 'PUT', body: { title, author, genre_ids, lecture_ids },
+      });
+    } else {
+      const id = generateBookId(author, title);
+      const { exists } = await (await adminFetch(`/api/admin/check-book-id/${id}`)).json();
+      if (exists) { alert(`ID "${id}" already exists. Adjust the author or title slightly.`); return; }
+      await adminFetch('/api/admin/books', {
+        method: 'POST', body: { id, title, author, genre_ids, lecture_ids },
+      });
+    }
+    closeEditModal();
+    invalidateRef('books');
+    loadAdminTab('books');
+  } catch (err) { alert('Error saving: ' + err.message); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  PROFESSOR FORM
+// ════════════════════════════════════════════════════════════════════════════
+
+async function renderProfessorForm(data) {
+  const allGenres = await fetchRef('genres');
+  const selGenres = data?.genre_ids || [];
+  const isCurrent = data ? data.is_current : false;
+
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-group">
+      <label>Name</label>
+      <input class="form-input" id="f-name" value="${esc(data?.name||'')}" placeholder="Full name" required />
+    </div>
+    ${!data ? `<div class="form-group">
+      <label>ID (auto-assigned)</label>
+      <div class="id-preview" id="prof-id-preview">Loading…</div>
+    </div>` : `<div class="form-group">
+      <label>ID</label>
+      <div class="id-preview">${esc(data.id)}</div>
+    </div>`}
+    <div class="form-group">
+      <label class="form-check">
+        <input type="checkbox" id="f-current" ${isCurrent ? 'checked' : ''}
+               onchange="toggleProfGenres()" />
+        <span>Current faculty</span>
+      </label>
+    </div>
+    <div id="current-fields" style="${isCurrent ? '' : 'display:none'}">
+      <div class="form-group">
+        <label>Office Hours URL</label>
+        <input class="form-input" id="f-office" value="${esc(data?.office_hours||'')}" placeholder="https://…" />
+      </div>
+      <div class="form-group">
+        <label>Genre Specialties</label>
+        ${buildMultiSelect('f-genres', allGenres.map(g => ({ id: g.id, label: g.name })), selGenres)}
+      </div>
+    </div>`;
+
+  if (!data) {
+    nextId('professor').then(id => {
+      const el = document.getElementById('prof-id-preview');
+      if (el) el.textContent = id;
+    });
+  }
+}
+
+function toggleProfGenres() {
+  const isCurrent = document.getElementById('f-current').checked;
+  document.getElementById('current-fields').style.display = isCurrent ? '' : 'none';
+}
+
+async function saveProfessor() {
+  const name       = document.getElementById('f-name').value.trim();
+  const is_current = document.getElementById('f-current').checked;
+  const office_hours = is_current ? (document.getElementById('f-office')?.value.trim() || '') : '';
+  const genre_ids  = is_current ? getMultiSelectValues('f-genres') : [];
+  if (!name) { alert('Name is required.'); return; }
+
+  try {
+    if (editingId) {
+      await adminFetch(`/api/admin/professors/${encodeURIComponent(editingId)}`, {
+        method: 'PUT', body: { name, is_current, office_hours, genre_ids },
+      });
+    } else {
+      const id = document.getElementById('prof-id-preview').textContent;
+      await adminFetch('/api/admin/professors', {
+        method: 'POST', body: { id, name, is_current, office_hours, genre_ids },
+      });
+    }
+    closeEditModal();
+    invalidateRef('professors');
+    invalidateRef('current-professors');
+    loadAdminTab('professors');
+  } catch (err) { alert('Error saving: ' + err.message); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  LECTURE FORM
+// ════════════════════════════════════════════════════════════════════════════
+
+async function renderLectureForm(data) {
+  const [allProfs, allBooks] = await Promise.all([fetchRef('professors'), fetchRef('books')]);
+  const selBooks = data?.book_ids || [];
+
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-group">
+      <label>Title</label>
+      <input class="form-input" id="f-title" value="${esc(data?.title||'')}" placeholder="Lecture title" required />
+    </div>
+    <div class="form-group">
+      <label>Date (e.g. Fall 2024)</label>
+      <input class="form-input" id="f-dates" value="${esc(data?.dates||'')}" placeholder="Fall 2024" />
+    </div>
+    <div class="form-group">
+      <label>Professor</label>
+      ${buildSingleTypeahead('f-professor', allProfs.map(p => ({ id: p.id, label: p.name })), data?.professors_id || '')}
+      <div style="font-size:.72rem;color:var(--admin-muted);margin-top:.3rem;font-style:italic;">If a new guest lecturer, you will first need to add them as a professor that is not current faculty.</div>
+    </div>
+    <div class="form-group">
+      <label>Google Drive Link</label>
+      <input class="form-input" id="f-link" value="${esc(data?.link||'')}" placeholder="https://drive.google.com/…" />
+    </div>
+    ${!data ? `<div class="form-group">
+      <label>ID (auto-assigned)</label>
+      <div class="id-preview" id="lec-id-preview">Loading…</div>
+    </div>` : `<div class="form-group">
+      <label>ID</label>
+      <div class="id-preview">${esc(data.id)}</div>
+    </div>`}
+    <div class="form-group">
+      <label>Linked Books</label>
+      ${buildTypeaheadSelect('f-books', allBooks.map(b => ({ id: b.id, label: `${b.title} — ${b.author||''}` })), selBooks)}
+    </div>`;
+
+  if (!data) {
+    nextId('lecture').then(id => {
+      const el = document.getElementById('lec-id-preview');
+      if (el) el.textContent = id;
+    });
+  }
+}
+
+async function saveLecture() {
+  const title        = document.getElementById('f-title').value.trim();
+  const dates        = document.getElementById('f-dates').value.trim();
+  const professors_id = getSingleTypeaheadValue('f-professor');
+  const link         = document.getElementById('f-link').value.trim();
+  const book_ids     = getTypeaheadValues('f-books');
+  if (!title)          { alert('Title is required.'); return; }
+  if (!professors_id)  { alert('Please select a professor.'); return; }
+
+  try {
+    if (editingId) {
+      await adminFetch(`/api/admin/lectures/${encodeURIComponent(editingId)}`, {
+        method: 'PUT', body: { title, dates, professors_id, link, book_ids },
+      });
+    } else {
+      const id = document.getElementById('lec-id-preview').textContent;
+      await adminFetch('/api/admin/lectures', {
+        method: 'POST', body: { id, title, dates, professors_id, link, book_ids },
+      });
+    }
+    closeEditModal();
+    invalidateRef('lectures');
+    loadAdminTab('lectures');
+  } catch (err) { alert('Error saving: ' + err.message); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  GENRE FORM
+// ════════════════════════════════════════════════════════════════════════════
+
+async function renderGenreForm(data) {
+  const [allBooks, allCurrProfs] = await Promise.all([
+    fetchRef('books'), fetchRef('current-professors'),
+  ]);
+  const selBooks = data?.book_ids      || [];
+  const selProfs = data?.professor_ids || [];
+
+  document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-group">
+      <label>Genre Name</label>
+      <input class="form-input" id="f-name" value="${esc(data?.name||'')}" placeholder="e.g. political philosophy" required />
+    </div>
+    ${!data ? `<div class="form-group">
+      <label>ID (auto-assigned)</label>
+      <div class="id-preview" id="genre-id-preview">Loading…</div>
+    </div>` : `<div class="form-group">
+      <label>ID</label>
+      <div class="id-preview">${esc(data.id)}</div>
+    </div>`}
+    <div class="form-group">
+      <label>Connected Books</label>
+      ${buildTypeaheadSelect('f-books', allBooks.map(b => ({ id: b.id, label: `${b.title} — ${b.author||''}` })), selBooks)}
+    </div>
+    <div class="form-group">
+      <label>Connected Professors (current faculty only)</label>
+      ${buildMultiSelect('f-professors', allCurrProfs.map(p => ({ id: p.id, label: p.name })), selProfs)}
+    </div>`;
+
+  if (!data) {
+    nextId('genre').then(id => {
+      const el = document.getElementById('genre-id-preview');
+      if (el) el.textContent = id;
+    });
+  }
+}
+
+async function saveGenre() {
+  const name         = document.getElementById('f-name').value.trim();
+  const book_ids      = getTypeaheadValues('f-books');
+  const professor_ids = getMultiSelectValues('f-professors');
+  if (!name) { alert('Genre name is required.'); return; }
+
+  try {
+    if (editingId) {
+      await adminFetch(`/api/admin/genres/${encodeURIComponent(editingId)}`, {
+        method: 'PUT', body: { name, book_ids, professor_ids },
+      });
+    } else {
+      const id = document.getElementById('genre-id-preview').textContent;
+      await adminFetch('/api/admin/genres', {
+        method: 'POST', body: { id, name, book_ids, professor_ids },
+      });
+    }
+    closeEditModal();
+    invalidateRef('genres');
+    loadAdminTab('genres');
+  } catch (err) { alert('Error saving: ' + err.message); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  DELETE
+// ════════════════════════════════════════════════════════════════════════════
+
+let pendingDeleteId = null;
+
+function openDeleteConfirm(id) {
+  pendingDeleteId = id;
+  const item  = adminListData.find(x => String(x.id) === String(id));
+  const label = item?.title || item?.name || id;
+
+  let msg = `Delete "<strong>${esc(label)}</strong>"?`;
+  if (adminTab === 'professors') {
+    msg += ' This will also delete all lectures by this professor and their book associations.<br><br><em>Deleting a professor also deletes all lectures they have made. If a professor is retiring or changing positions, please just edit them so they are no longer current rather than deleting them entirely. Thank you!</em>';
+  } else if (adminTab === 'books') {
+    msg += ' This will also remove all genre and lecture links for this book.';
+  } else if (adminTab === 'genres') {
+    msg += ' This will also remove this genre from all books and professors.';
+  } else if (adminTab === 'lectures') {
+    msg += ' This will also remove all book associations for this lecture.';
+  }
+  msg += ' <strong>This cannot be undone.</strong>';
+
+  document.getElementById('confirm-msg').innerHTML = msg;
+  document.getElementById('confirm-ok').onclick = () => executeDelete(id);
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-modal').style.display = 'none';
+  pendingDeleteId = null;
+}
+
+async function executeDelete(id) {
+  closeConfirm();
+  try {
+    await adminFetch(`/api/admin/${adminTab}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    // invalidate relevant ref caches
+    if (adminTab === 'books')      { invalidateRef('books'); }
+    if (adminTab === 'professors') { invalidateRef('professors'); invalidateRef('current-professors'); }
+    if (adminTab === 'lectures')   { invalidateRef('lectures'); }
+    if (adminTab === 'genres')     { invalidateRef('genres'); }
+    loadAdminTab(adminTab);
+  } catch (err) { alert('Error deleting: ' + err.message); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  MULTI-SELECT COMPONENT
+// ════════════════════════════════════════════════════════════════════════════
+
+function buildMultiSelect(name, items, selectedIds) {
+  const selSet = new Set(selectedIds.map(String));
+  return `<div class="ms-wrap">
+    <input class="ms-filter" type="text" placeholder="Filter…" oninput="filterMs(this)" />
+    <div class="ms-list">
+      ${items.length
+        ? items.map(item => `
+          <label class="ms-item">
+            <input type="checkbox" class="ms-cb" name="${name}" value="${esc(String(item.id))}"
+                   ${selSet.has(String(item.id)) ? 'checked' : ''} />
+            <span>${esc(item.label)}</span>
+          </label>`).join('')
+        : '<div class="ms-empty">No items available.</div>'}
+    </div>
+  </div>`;
+}
+
+function filterMs(input) {
+  const q = input.value.toLowerCase();
+  input.nextElementSibling.querySelectorAll('.ms-item').forEach(el => {
+    el.style.display = el.querySelector('span').textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function getMultiSelectValues(name) {
+  return Array.from(document.querySelectorAll(`input.ms-cb[name="${name}"]:checked`))
+    .map(cb => cb.value);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  TYPEAHEAD SELECT COMPONENT
+// ════════════════════════════════════════════════════════════════════════════
+
+const tsCache = {}; // stores items per field name
+
+function buildTypeaheadSelect(name, items, selectedIds) {
+  tsCache[name] = items;
+  const selSet  = new Set(selectedIds.map(String));
+  const chips   = items.filter(i => selSet.has(String(i.id)));
+
+  return `<div class="ts-wrap" data-name="${name}" data-selected='${JSON.stringify(chips.map(c => ({ id: String(c.id), label: c.label })))}'>
+    <div class="ts-chips" id="ts-chips-${name}">
+      ${chips.map(c => tsChipHtml(name, String(c.id), c.label)).join('')}
+    </div>
+    <input class="ts-input" type="text" placeholder="Type to search…"
+           oninput="tsSearch(this, '${name}')"
+           onfocus="tsSearch(this, '${name}')"
+           autocomplete="off" />
+    <div class="ts-dropdown" id="ts-drop-${name}" style="display:none"></div>
+  </div>`;
+}
+
+function tsChipHtml(name, id, label) {
+  return `<span class="ts-chip">
+    ${esc(label)}
+    <button type="button" class="ts-chip-remove"
+            data-name="${name}" data-id="${esc(id)}"
+            onclick="tsRemove(this)">×</button>
+  </span>`;
+}
+
+function tsSearch(input, name) {
+  const q     = input.value.toLowerCase();
+  const items = tsCache[name] || [];
+  const wrap  = document.querySelector(`.ts-wrap[data-name="${name}"]`);
+  if (!wrap) return;
+  const selected  = JSON.parse(wrap.dataset.selected || '[]');
+  const selIds    = new Set(selected.map(s => s.id));
+  const drop      = document.getElementById(`ts-drop-${name}`);
+
+  if (!q) { drop.style.display = 'none'; return; }
+
+  const matches = items
+    .filter(item => !selIds.has(String(item.id)) && item.label.toLowerCase().includes(q))
+    .slice(0, 15);
+
+  if (!matches.length) {
+    drop.innerHTML = `<div class="ts-no-results">No results</div>`;
+  } else {
+    drop.innerHTML = matches.map(item =>
+      `<div class="ts-option"
+            data-id="${esc(String(item.id))}"
+            data-label="${esc(item.label)}"
+            data-name="${name}"
+            onmousedown="tsSelect(this)">
+        ${esc(item.label)}
+       </div>`
+    ).join('');
+  }
+  drop.style.display = '';
+}
+
+function tsSelect(optEl) {
+  const name  = optEl.dataset.name;
+  const id    = optEl.dataset.id;
+  const label = optEl.dataset.label;
+  const wrap  = document.querySelector(`.ts-wrap[data-name="${name}"]`);
+  if (!wrap) return;
+
+  const selected = JSON.parse(wrap.dataset.selected || '[]');
+  if (!selected.find(s => s.id === id)) {
+    selected.push({ id, label });
+    wrap.dataset.selected = JSON.stringify(selected);
+  }
+  document.getElementById(`ts-chips-${name}`).innerHTML =
+    selected.map(s => tsChipHtml(name, s.id, s.label)).join('');
+
+  const input = wrap.querySelector('.ts-input');
+  input.value = '';
+  document.getElementById(`ts-drop-${name}`).style.display = 'none';
+}
+
+function tsRemove(btn) {
+  const name = btn.dataset.name;
+  const id   = btn.dataset.id;
+  const wrap = document.querySelector(`.ts-wrap[data-name="${name}"]`);
+  if (!wrap) return;
+
+  const selected = JSON.parse(wrap.dataset.selected || '[]').filter(s => s.id !== id);
+  wrap.dataset.selected = JSON.stringify(selected);
+  document.getElementById(`ts-chips-${name}`).innerHTML =
+    selected.map(s => tsChipHtml(name, s.id, s.label)).join('');
+}
+
+function getTypeaheadValues(name) {
+  const wrap = document.querySelector(`.ts-wrap[data-name="${name}"]`);
+  if (!wrap) return [];
+  return JSON.parse(wrap.dataset.selected || '[]').map(s => s.id);
+}
+
+// ── Single-select typeahead (one value, e.g. professor on a lecture) ─────────
+const stCache = {};
+
+function buildSingleTypeahead(name, items, selectedId) {
+  stCache[name] = items;
+  const sel = selectedId ? items.find(i => String(i.id) === String(selectedId)) : null;
+  const chipHtml = sel
+    ? `<span class="ts-chip">${esc(sel.label)}<button type="button" class="ts-chip-remove" data-name="${name}" onclick="stClear(this)">×</button></span>`
+    : '';
+  return `<div class="ts-wrap" data-name="${name}" data-selected="${sel ? esc(String(sel.id)) : ''}" data-single="1">
+    <input class="ts-input" id="st-input-${name}" type="text"
+           placeholder="Type to search…"
+           oninput="stSearch(this,'${name}')" onfocus="stSearch(this,'${name}')"
+           autocomplete="off" style="${sel ? 'display:none' : ''}" />
+    <div id="st-chip-${name}">${chipHtml}</div>
+    <div class="ts-dropdown" id="st-drop-${name}" style="display:none"></div>
+  </div>`;
+}
+
+function stSearch(input, name) {
+  const q     = input.value.toLowerCase();
+  const items = stCache[name] || [];
+  const drop  = document.getElementById(`st-drop-${name}`);
+  if (!q) { drop.style.display = 'none'; return; }
+  const matches = items.filter(i => i.label.toLowerCase().includes(q)).slice(0, 15);
+  drop.innerHTML = matches.length
+    ? matches.map(i => `<div class="ts-option" data-id="${esc(String(i.id))}" data-label="${esc(i.label)}" data-name="${name}" onmousedown="stSelect(this)">${esc(i.label)}</div>`).join('')
+    : `<div class="ts-no-results">No results</div>`;
+  drop.style.display = '';
+}
+
+function stSelect(optEl) {
+  const name  = optEl.dataset.name;
+  const id    = optEl.dataset.id;
+  const label = optEl.dataset.label;
+  const wrap  = document.querySelector(`.ts-wrap[data-name="${name}"][data-single]`);
+  if (!wrap) return;
+  wrap.dataset.selected = id;
+  document.getElementById(`st-input-${name}`).style.display = 'none';
+  document.getElementById(`st-chip-${name}`).innerHTML =
+    `<span class="ts-chip">${esc(label)}<button type="button" class="ts-chip-remove" data-name="${name}" onclick="stClear(this)">×</button></span>`;
+  document.getElementById(`st-drop-${name}`).style.display = 'none';
+}
+
+function stClear(btn) {
+  const name = btn.dataset.name;
+  const wrap = document.querySelector(`.ts-wrap[data-name="${name}"][data-single]`);
+  if (!wrap) return;
+  wrap.dataset.selected = '';
+  document.getElementById(`st-chip-${name}`).innerHTML = '';
+  const input = document.getElementById(`st-input-${name}`);
+  input.style.display = '';
+  input.value = '';
+  input.focus();
+}
+
+function getSingleTypeaheadValue(name) {
+  const wrap = document.querySelector(`.ts-wrap[data-name="${name}"][data-single]`);
+  return wrap ? (wrap.dataset.selected || '') : '';
+}
+
+// Close any open typeahead dropdown when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ts-wrap')) {
+    document.querySelectorAll('.ts-dropdown').forEach(d => d.style.display = 'none');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+//  UTILITIES
+// ════════════════════════════════════════════════════════════════════════════
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
