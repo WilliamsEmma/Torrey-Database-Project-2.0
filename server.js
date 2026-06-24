@@ -595,6 +595,6 @@ app.delete('/api/admin/genres/:id', adminAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// ── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Torrey Database running on port ${PORT}`));
