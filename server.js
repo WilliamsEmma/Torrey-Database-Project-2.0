@@ -25,11 +25,11 @@ function saveAdminPassword(pw) {
 let ADMIN_PASSWORD = loadAdminPassword();
 
 // ── Email configuration ───────────────────────────────────────────────────────
-// Fill in SENDER_EMAIL and SENDER_APP_PASSWORD after generating a Gmail App Password.
+// Set SENDER_EMAIL and SENDER_APP_PW as environment variables in Railway.
 // Instructions: myaccount.google.com → Security → 2-Step Verification → App passwords
-const SENDER_EMAIL    = 'torrey.database.pw@gmail.com';   // the Gmail account sending the message
-const SENDER_APP_PW   = 'qjib wjzw wrbe xwoa';    // 16-char App Password from Google
-const RECIPIENT_EMAIL = 'emmawillsd@gmail.com';   // always sends here
+const SENDER_EMAIL    = process.env.SENDER_EMAIL  || '';
+const SENDER_APP_PW   = process.env.SENDER_APP_PW || '';
+const RECIPIENT_EMAIL = 'emmawillsd@gmail.com';
 
 const mailer = nodemailer.createTransport({
   service: 'gmail',
@@ -71,8 +71,8 @@ function adminAuth(req, res, next) {
 }
 
 app.post('/api/forgot-password', async (req, res) => {
-  if (SENDER_EMAIL.startsWith('YOUR_')) {
-    return res.status(503).json({ error: 'Email is not configured yet. Fill in SENDER_EMAIL and SENDER_APP_PW in server.js.' });
+  if (!SENDER_EMAIL || !SENDER_APP_PW) {
+    return res.status(503).json({ error: 'Email is not configured yet. Set SENDER_EMAIL and SENDER_APP_PW in Railway environment variables.' });
   }
   try {
     await mailer.sendMail({
