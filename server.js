@@ -37,11 +37,15 @@ const mailer = nodemailer.createTransport({
 });
 
 // ── Database configuration ───────────────────────────────────────────────────
+// On Railway, set MYSQLHOST, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE, MYSQLPORT
+// as environment variables in the Railway dashboard. Locally it falls back to
+// the hardcoded values below.
 const DB_CONFIG = {
-  host:     process.env.DB_HOST,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host:     process.env.MYSQLHOST     || 'localhost',
+  user:     process.env.MYSQLUSER     || 'root',
+  password: process.env.MYSQLPASSWORD || 'CSTSstudenschoo1',
+  database: process.env.MYSQLDATABASE || 'torrey2',
+  port:     process.env.MYSQLPORT     || 3306,
 };
 
 let pool;
@@ -592,15 +596,5 @@ app.delete('/api/admin/genres/:id', adminAuth, async (req, res) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-const PORT = 3000;
-app.listen(PORT, () => console.log(`Torrey Database running at http://localhost:${PORT}`));
-
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Torrey Database running on port ${PORT}`));
