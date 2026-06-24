@@ -3,7 +3,7 @@ const mysql      = require('mysql2/promise');
 const cors       = require('cors');
 const path       = require('path');
 const crypto     = require('crypto');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 const app = express();
 app.use(cors());
@@ -25,16 +25,10 @@ function saveAdminPassword(pw) {
 let ADMIN_PASSWORD = loadAdminPassword();
 
 // ── Email configuration ───────────────────────────────────────────────────────
-// Set SENDER_EMAIL and SENDER_APP_PW as environment variables in Railway.
-// Instructions: myaccount.google.com → Security → 2-Step Verification → App passwords
-const SENDER_EMAIL    = process.env.SENDER_EMAIL  || '';
-const SENDER_APP_PW   = process.env.SENDER_APP_PW || '';
+// Set RESEND_API_KEY as an environment variable in Railway.
+// Sign up at resend.com to get an API key.
 const RECIPIENT_EMAIL = 'emmawillsd@gmail.com';
-
-const mailer = nodemailer.createTransport({
-  service: 'gmail',
-  auth: { user: SENDER_EMAIL, pass: SENDER_APP_PW }
-});
+const resend = new Resend(process.env.RESEND_API_KEY || '');
 
 // ── Database configuration ───────────────────────────────────────────────────
 // On Railway, set MYSQLHOST, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE, MYSQLPORT
@@ -71,12 +65,12 @@ function adminAuth(req, res, next) {
 }
 
 app.post('/api/forgot-password', async (req, res) => {
-  if (!SENDER_EMAIL || !SENDER_APP_PW) {
-    return res.status(503).json({ error: 'Email is not configured yet. Set SENDER_EMAIL and SENDER_APP_PW in Railway environment variables.' });
+  if (!process.env.RESEND_API_KEY) {
+    return res.status(503).json({ error: 'Email is not configured yet. Set RESEND_API_KEY in Railway environment variables.' });
   }
   try {
-    await mailer.sendMail({
-      from:    `"Torrey Database" <${SENDER_EMAIL}>`,
+    await resend.emails.send({
+      from:    'Torrey Database <onboarding@resend.dev>',
       to:      RECIPIENT_EMAIL,
       subject: 'Torrey Database — Admin Password',
       text:    `The current Torrey Database admin password is:\n\n  ${ADMIN_PASSWORD}\n\nIf you did not request this, you can ignore this email.`
