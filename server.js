@@ -1,9 +1,8 @@
-const express    = require('express');
-const mysql      = require('mysql2/promise');
-const cors       = require('cors');
-const path       = require('path');
-const crypto     = require('crypto');
-const { Resend } = require('resend');
+const express = require('express');
+const mysql   = require('mysql2/promise');
+const cors    = require('cors');
+const path    = require('path');
+const crypto  = require('crypto');
 
 const app = express();
 app.use(cors());
@@ -11,24 +10,43 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // ── Admin password ───────────────────────────────────────────────────────────
-// Password is stored in admin_config.json (auto-created). Default: 'torrey'
-const fs = require('fs');
-const CONFIG_FILE = path.join(__dirname, 'admin_config.json');
+// Stored in the database (settings table) so it survives redeploys.
+let ADMIN_PASSWORD = 'torrey'; // overwritten on startup once DB is ready
 
-function loadAdminPassword() {
-  try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')).password || 'torrey'; }
-  catch { return 'torrey'; }
+async function loadAdminPassword() {
+  try {
+    const rows = await query("SELECT `value` FROM settings WHERE `key` = 'admin_password'");
+    if (rows.length) ADMIN_PASSWORD = rows[0].value;
+  } catch { /* use default */ }
 }
-function saveAdminPassword(pw) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify({ password: pw }), 'utf8');
+async function saveAdminPassword(pw) {
+  await query(
+    "INSERT INTO settings (`key`, `value`) VALUES ('admin_password', ?) ON DUPLICATE KEY UPDATE `value` = ?",
+    [pw, pw]
+  );
 }
-let ADMIN_PASSWORD = loadAdminPassword();
 
 // ── Email configuration ───────────────────────────────────────────────────────
-// Set RESEND_API_KEY as an environment variable in Railway.
-// Sign up at resend.com to get an API key.
+// Set BREVO_API_KEY and BREVO_SENDER_EMAIL as environment variables in Railway.
+// Sign up at brevo.com, verify a sender email address, then copy your API key.
 const RECIPIENT_EMAIL = 'emmawillsd@gmail.com';
-const resend = new Resend(process.env.RESEND_API_KEY || '');
+
+async function sendBrevoEmail(to, subject, text) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      sender: { name: 'Torrey Database', email: process.env.BREVO_SENDER_EMAIL },
+      to: [{ email: to }],
+      subject,
+      textContent: text
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+}
 
 // ── Database configuration ───────────────────────────────────────────────────
 // On Railway, set MYSQLHOST, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE, MYSQLPORT
@@ -65,16 +83,15 @@ function adminAuth(req, res, next) {
 }
 
 app.post('/api/forgot-password', async (req, res) => {
-  if (!process.env.RESEND_API_KEY) {
-    return res.status(503).json({ error: 'Email is not configured yet. Set RESEND_API_KEY in Railway environment variables.' });
+  if (!process.env.BREVO_API_KEY || !process.env.BREVO_SENDER_EMAIL) {
+    return res.status(503).json({ error: 'Email is not configured yet. Set BREVO_API_KEY and BREVO_SENDER_EMAIL in Railway environment variables.' });
   }
   try {
-    await resend.emails.send({
-      from:    'Torrey Database <onboarding@resend.dev>',
-      to:      RECIPIENT_EMAIL,
-      subject: 'Torrey Database — Admin Password',
-      text:    `The current Torrey Database admin password is:\n\n  ${ADMIN_PASSWORD}\n\nIf you did not request this, you can ignore this email.`
-    });
+    await sendBrevoEmail(
+      RECIPIENT_EMAIL,
+      'Torrey Database — Admin Password',
+      `The current Torrey Database admin password is:\n\n  ${ADMIN_PASSWORD}\n\nIf you did not request this, you can ignore this email.`
+    );
     res.json({ ok: true });
   } catch (err) {
     console.error('[/api/forgot-password]', err.message);
@@ -96,13 +113,13 @@ app.post('/api/admin/logout', adminAuth, (req, res) => {
   res.sendStatus(204);
 });
 
-app.post('/api/admin/change-password', adminAuth, (req, res) => {
+app.post('/api/admin/change-password', adminAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both fields are required.' });
   if (currentPassword !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Current password is incorrect.' });
   if (newPassword.length < 4) return res.status(400).json({ error: 'New password must be at least 4 characters.' });
   ADMIN_PASSWORD = newPassword;
-  saveAdminPassword(newPassword);
+  await saveAdminPassword(newPassword);
   res.json({ ok: true });
 });
 
@@ -591,4 +608,15 @@ app.delete('/api/admin/genres/:id', adminAuth, async (req, res) => {
 
 // ── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Torrey Database running on port ${PORT}`));
+async function start() {
+  // Create settings table if it doesn't exist, then load the saved password
+  try {
+    await query('CREATE TABLE IF NOT EXISTS settings (`key` VARCHAR(50) PRIMARY KEY, `value` TEXT NOT NULL)');
+    await query("INSERT IGNORE INTO settings (`key`, `value`) VALUES ('admin_password', 'torrey')");
+    await loadAdminPassword();
+  } catch (err) {
+    console.error('[startup] DB init error:', err.message);
+  }
+  app.listen(PORT, () => console.log(`Torrey Database running on port ${PORT}`));
+}
+start();
