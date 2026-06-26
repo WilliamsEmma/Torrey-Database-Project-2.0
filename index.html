@@ -1268,7 +1268,7 @@ function buildTypeaheadSelect(name, items, selectedIds) {
   const selSet  = new Set(selectedIds.map(String));
   const chips   = items.filter(i => selSet.has(String(i.id)));
 
-  return `<div class="ts-wrap" data-name="${name}" data-selected='${JSON.stringify(chips.map(c => ({ id: String(c.id), label: c.label })))}'>
+  return `<div class="ts-wrap" data-name="${name}" data-selected="${esc(JSON.stringify(chips.map(c => ({ id: String(c.id), label: c.label }))))}">
     <div class="ts-chips" id="ts-chips-${name}">
       ${chips.map(c => tsChipHtml(name, String(c.id), c.label)).join('')}
     </div>
