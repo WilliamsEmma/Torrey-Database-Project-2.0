@@ -208,6 +208,44 @@ app.get('/api/professors', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/lectures', async (req, res) => {
+  try {
+    const s = `%${req.query.search || ''}%`;
+    const rows = await query(
+      `SELECT l.id, l.title, l.dates, l.link,
+              p.professors_id AS professor_id, p.professors_name AS professor
+       FROM lectures l
+       LEFT JOIN professors p ON l.professors_id = p.professors_id
+       WHERE l.title LIKE ? OR p.professors_name LIKE ?
+       ORDER BY l.title LIMIT 50`,
+      [s, s]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/lectures/:id', async (req, res) => {
+  try {
+    const [lec] = await query(
+      `SELECT l.id, l.title, l.dates, l.link,
+              p.professors_id AS professor_id, p.professors_name AS professor
+       FROM lectures l
+       LEFT JOIN professors p ON l.professors_id = p.professors_id
+       WHERE l.id = ?`, [req.params.id]
+    );
+    if (!lec) return res.status(404).json({ error: 'Lecture not found' });
+
+    const books = await query(
+      `SELECT b.id, b.title, b.Author AS author
+       FROM book b
+       JOIN book_lectures bl ON b.id = bl.book_id
+       WHERE bl.lecture_id = ?`, [req.params.id]
+    );
+
+    res.json({ ...lec, books });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/professors/:id', async (req, res) => {
   try {
     const id = req.params.id;

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Torrey Database</title>
   <style>
-    /* ── Reset & Base ────────────────────────────────────────────────────────  */
+    /* ── Reset & Base ──────────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --cream:     #f5f0e8;
@@ -337,6 +337,7 @@
       <div class="mode-toggle">
         <button id="btn-books" class="active" onclick="setMode('books')">Search Books</button>
         <button id="btn-professors" onclick="setMode('professors')">Search Professors</button>
+        <button id="btn-lectures" onclick="setMode('lectures')">Search Lectures</button>
       </div>
       <div class="search-bar">
         <input id="search-input" type="text" placeholder="Search by title or author…" autocomplete="off" />
@@ -463,8 +464,11 @@ function setMode(m) {
   searchMode = m;
   document.getElementById('btn-books').classList.toggle('active', m === 'books');
   document.getElementById('btn-professors').classList.toggle('active', m === 'professors');
+  document.getElementById('btn-lectures').classList.toggle('active', m === 'lectures');
   document.getElementById('search-input').placeholder =
-    m === 'books' ? 'Search by title or author…' : 'Search by professor name…';
+    m === 'books'      ? 'Search by title or author…' :
+    m === 'professors' ? 'Search by professor name…'  :
+                         'Search by title or lecturer…';
   document.getElementById('results-list').innerHTML = '';
   document.getElementById('detail').innerHTML = '';
   document.getElementById('search-input').focus();
@@ -484,7 +488,9 @@ async function doSearch() {
 
   const ep = searchMode === 'books'
     ? `/api/books?search=${encodeURIComponent(q)}`
-    : `/api/professors?search=${encodeURIComponent(q)}`;
+    : searchMode === 'professors'
+    ? `/api/professors?search=${encodeURIComponent(q)}`
+    : `/api/lectures?search=${encodeURIComponent(q)}`;
 
   try {
     const data = await (await fetch(ep)).json();
@@ -495,9 +501,14 @@ async function doSearch() {
              <div class="r-title">${esc(item.title)}</div>
              <div class="r-sub">${esc(item.author || 'Unknown author')}</div>
            </div>`
-        : `<div class="result-item" onclick="showProfessor('${esc(item.id)}')">
+        : searchMode === 'professors'
+        ? `<div class="result-item" onclick="showProfessor('${esc(item.id)}')">
              <div class="r-title">${esc(item.name)}</div>
              <div class="r-sub">Current faculty</div>
+           </div>`
+        : `<div class="result-item" onclick="showLecture('${esc(item.id)}')">
+             <div class="r-title">${esc(item.title)}</div>
+             <div class="r-sub">${esc(item.professor || 'Unknown lecturer')}${item.dates ? ' &bull; ' + esc(item.dates) : ''}</div>
            </div>`
     ).join('');
   } catch (err) {
@@ -598,6 +609,45 @@ async function showProfessor(id) {
           ${p.office_hours ? `<a class="office-link" href="${esc(p.office_hours)}" target="_blank" rel="noopener">Book Office Hours</a>` : ''}
         </div>
         <div class="detail-body">${genreSection}${lectureSection}</div>
+      </div>`;
+  } catch (err) {
+    detailEl.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;
+  }
+}
+
+async function showLecture(id) {
+  const detailEl = document.getElementById('detail');
+  detailEl.innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('results-list').innerHTML = '';
+  window.scrollTo({ top: detailEl.offsetTop - 20, behavior: 'smooth' });
+  try {
+    const l = await (await fetch(`/api/lectures/${encodeURIComponent(id)}`)).json();
+
+    const bookSection = l.books.length
+      ? `<div class="section">
+           <div class="section-title">Connected Books</div>
+           <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+             ${l.books.map(b =>
+               `<span class="book-chip" onclick="showBook('${esc(b.id)}')" title="${esc(b.author||'')}">${esc(b.title)}</span>`
+             ).join('')}
+           </div>
+         </div>` : '';
+
+    const metaLine = [
+      l.professor ? `<span class="professor-name" style="cursor:pointer" onclick="showProfessor('${esc(String(l.professor_id))}')">${esc(l.professor)}</span>` : null,
+      l.dates ? `<span>${esc(l.dates)}</span>` : null
+    ].filter(Boolean).join(' &bull; ');
+
+    detailEl.innerHTML = `
+      <span class="back-btn" onclick="clearDetail()">← Back to results</span>
+      <div class="detail-card">
+        <div class="detail-header">
+          ${l.link
+            ? `<h2><a href="${esc(l.link)}" target="_blank" rel="noopener" style="color:inherit">${esc(l.title)}</a></h2>`
+            : `<h2>${esc(l.title)}</h2>`}
+          <div class="subtitle">${metaLine}</div>
+        </div>
+        <div class="detail-body">${bookSection}</div>
       </div>`;
   } catch (err) {
     detailEl.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;
