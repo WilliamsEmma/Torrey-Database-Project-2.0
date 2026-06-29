@@ -277,6 +277,8 @@
     }
     .form-input:focus { border-color:var(--admin-accent); }
     .form-input::placeholder { color:var(--admin-muted); }
+    .req-star { color:#e06c6c; margin-left:.2rem; }
+    .req-note { font-size:.72rem; color:var(--admin-muted); margin-top:.8rem; font-style:italic; }
     .id-preview {
       background:var(--admin-bg); border:1px solid var(--admin-border); border-radius:3px;
       padding:.5rem .7rem; font-size:.85rem; color:var(--admin-accent); font-family:monospace;
@@ -948,14 +950,14 @@ async function renderBookForm(data) {
   const isNew = !data;
   document.getElementById('edit-modal-body').innerHTML = `
     ${isNew ? `<div class="form-group">
-      <label>Author <small>— use "Last name, First name" format</small></label>
+      <label>Author<span class="req-star">*</span> <small>— use "Last name, First name" format</small></label>
       <input class="form-input" id="f-author" value="" placeholder="e.g. Austen, Jane" oninput="updateBookIdPreview()" required />
     </div>` : `<div class="form-group">
-      <label>Author</label>
+      <label>Author<span class="req-star">*</span></label>
       <input class="form-input" id="f-author" value="${esc(data.author||'')}" required />
     </div>`}
     <div class="form-group">
-      <label>Title</label>
+      <label>Title<span class="req-star">*</span></label>
       <input class="form-input" id="f-title" value="${esc(data?.title||'')}"
              ${isNew ? 'oninput="updateBookIdPreview()"' : ''} placeholder="Book title" required />
     </div>
@@ -970,7 +972,8 @@ async function renderBookForm(data) {
     <div class="form-group">
       <label>Linked Lectures</label>
       ${buildTypeaheadSelect('f-lectures', allLectures.map(l => ({ id: l.id, label: `${l.title} (${l.dates||''})` })), selLectures)}
-    </div>`;
+    </div>
+    <div class="req-note">* Required</div>`;
 }
 
 async function updateBookIdPreview() {
@@ -1026,7 +1029,7 @@ async function renderProfessorForm(data) {
 
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-group">
-      <label>Name</label>
+      <label>Name<span class="req-star">*</span></label>
       <input class="form-input" id="f-name" value="${esc(data?.name||'')}" placeholder="Full name" required />
     </div>
     <div style="display:none">
@@ -1048,7 +1051,8 @@ async function renderProfessorForm(data) {
         <label>Genre Specialties</label>
         ${buildMultiSelect('f-genres', allGenres.map(g => ({ id: g.id, label: g.name })), selGenres)}
       </div>
-    </div>`;
+    </div>
+    <div class="req-note">* Required</div>`;
 
   if (!data) {
     nextId('professor').then(id => {
@@ -1098,7 +1102,7 @@ async function renderLectureForm(data) {
 
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-group">
-      <label>Title</label>
+      <label>Title<span class="req-star">*</span></label>
       <input class="form-input" id="f-title" value="${esc(data?.title||'')}" placeholder="Lecture title" required />
     </div>
     <div class="form-group">
@@ -1106,7 +1110,7 @@ async function renderLectureForm(data) {
       <input class="form-input" id="f-dates" value="${esc(data?.dates||'')}" placeholder="Fall 2024" />
     </div>
     <div class="form-group">
-      <label>Professor</label>
+      <label>Professor<span class="req-star">*</span></label>
       ${buildSingleTypeahead('f-professor', allProfs.map(p => ({ id: p.id, label: p.name })), data?.professors_id || '')}
       <div style="font-size:.72rem;color:var(--admin-muted);margin-top:.3rem;font-style:italic;">If a new guest lecturer, you will first need to add them as a professor that is not current faculty.</div>
     </div>
@@ -1120,7 +1124,8 @@ async function renderLectureForm(data) {
     <div class="form-group">
       <label>Linked Books</label>
       ${buildTypeaheadSelect('f-books', allBooks.map(b => ({ id: b.id, label: `${b.title} — ${b.author||''}` })), selBooks)}
-    </div>`;
+    </div>
+    <div class="req-note">* Required</div>`;
 
   if (!data) {
     nextId('lecture').then(id => {
@@ -1169,7 +1174,7 @@ async function renderGenreForm(data) {
 
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-group">
-      <label>Genre Name</label>
+      <label>Genre Name<span class="req-star">*</span></label>
       <input class="form-input" id="f-name" value="${esc(data?.name||'')}" placeholder="e.g. political philosophy" required />
     </div>
     <div style="display:none">
@@ -1182,7 +1187,8 @@ async function renderGenreForm(data) {
     <div class="form-group">
       <label>Connected Professors (current faculty only)</label>
       ${buildMultiSelect('f-professors', allCurrProfs.map(p => ({ id: p.id, label: p.name })), selProfs)}
-    </div>`;
+    </div>
+    <div class="req-note">* Required</div>`;
 
   if (!data) {
     nextId('genre').then(id => {
