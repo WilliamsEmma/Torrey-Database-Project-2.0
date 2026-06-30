@@ -4,6 +4,8 @@ Original database version (see my other repository): Austen Chen, Alex Williams,
 
 All changes made between this version and the original Torrey Database: Emma Williams
 
+I have used Claude AI in the creation of all of the frontend files for this project.
+
 Notes:
 
 Compared to the original version, the initial data file has a completely filled out lecture table with the 182 lectures that are curricular and on the Torrey archive as of today, May 22nd, 2026, while the initial one only had 42 as a sample because Austen was short on time. Also, this has the added intermediary book_lectures table which was in my original design but which we ran out of time to complete for the class. This table is also filled to properly connect all of the lectures to the books they are on.
