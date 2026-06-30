@@ -136,7 +136,7 @@ app.get('/api/books', async (req, res) => {
     const rows = await query(
       `SELECT id, title, Author AS author FROM book
        WHERE title LIKE ? OR Author LIKE ?
-       ORDER BY title LIMIT 50`,
+       ORDER BY title${req.query.all ? '' : ' LIMIT 50'}`,
       [s, s]
     );
     res.json(rows);
@@ -202,7 +202,7 @@ app.get('/api/professors', async (req, res) => {
        FROM professors p
        JOIN current c ON c.professors_id = p.professors_id
        WHERE p.professors_name LIKE ?
-       ORDER BY p.professors_name LIMIT 50`, [s]
+       ORDER BY p.professors_name${req.query.all ? '' : ' LIMIT 50'}`, [s]
     );
     res.json(rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -217,7 +217,7 @@ app.get('/api/lectures', async (req, res) => {
        FROM lectures l
        LEFT JOIN professors p ON l.professors_id = p.professors_id
        WHERE l.title LIKE ? OR p.professors_name LIKE ?
-       ORDER BY l.title LIMIT 50`,
+       ORDER BY l.title${req.query.all ? '' : ' LIMIT 50'}`,
       [s, s]
     );
     res.json(rows);
@@ -378,13 +378,14 @@ app.get('/api/admin/books', adminAuth, async (req, res) => {
 app.get('/api/admin/books/:id', adminAuth, async (req, res) => {
   try {
     const [book] = await query(
-      `SELECT id, title, Author AS author FROM book WHERE id = ?`, [req.params.id]
+      `SELECT id, title, Author AS author, is_bible FROM book WHERE id = ?`, [req.params.id]
     );
     if (!book) return res.status(404).json({ error: 'Not found' });
     const genres   = await query(`SELECT genre_id FROM book_gen WHERE book_id = ?`,         [req.params.id]);
     const lectures = await query(`SELECT lecture_id FROM book_lectures WHERE book_id = ?`,  [req.params.id]);
     res.json({
       ...book,
+      is_bible:    !!book.is_bible,
       genre_ids:   genres.map(g => g.genre_id),
       lecture_ids: lectures.map(l => l.lecture_id),
     });
@@ -393,8 +394,8 @@ app.get('/api/admin/books/:id', adminAuth, async (req, res) => {
 
 app.post('/api/admin/books', adminAuth, async (req, res) => {
   try {
-    const { id, title, author, genre_ids = [], lecture_ids = [] } = req.body;
-    await query(`INSERT INTO book (id, title, Author) VALUES (?, ?, ?)`, [id, title, author]);
+    const { id, title, author, is_bible = false, genre_ids = [], lecture_ids = [] } = req.body;
+    await query(`INSERT INTO book (id, title, Author, is_bible) VALUES (?, ?, ?, ?)`, [id, title, author || null, is_bible ? 1 : 0]);
     for (const gid of genre_ids)
       await query(`INSERT INTO book_gen (book_id, genre_id) VALUES (?, ?)`, [id, gid]);
     for (const lid of lecture_ids)
@@ -405,8 +406,8 @@ app.post('/api/admin/books', adminAuth, async (req, res) => {
 
 app.put('/api/admin/books/:id', adminAuth, async (req, res) => {
   try {
-    const { title, author, genre_ids = [], lecture_ids = [] } = req.body;
-    await query(`UPDATE book SET title = ?, Author = ? WHERE id = ?`, [title, author, req.params.id]);
+    const { title, author, is_bible = false, genre_ids = [], lecture_ids = [] } = req.body;
+    await query(`UPDATE book SET title = ?, Author = ?, is_bible = ? WHERE id = ?`, [title, author || null, is_bible ? 1 : 0, req.params.id]);
     await query(`DELETE FROM book_gen WHERE book_id = ?`,       [req.params.id]);
     await query(`DELETE FROM book_lectures WHERE book_id = ?`,  [req.params.id]);
     for (const gid of genre_ids)

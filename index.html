@@ -344,6 +344,7 @@
       <div class="search-bar">
         <input id="search-input" type="text" placeholder="Search by title or author…" autocomplete="off" />
         <button onclick="doSearch()">Search</button>
+        <button onclick="seeAll()" style="background:transparent;border:1px solid var(--border);color:var(--brown);padding:.45rem .9rem;font-family:Georgia,serif;font-size:.9rem;cursor:pointer;border-radius:2px;">See All</button>
       </div>
     </div>
     <div id="results-list"></div>
@@ -497,6 +498,43 @@ async function doSearch() {
   try {
     const data = await (await fetch(ep)).json();
     if (!data.length) { listEl.innerHTML = '<div class="no-results">No results found.</div>'; return; }
+    listEl.innerHTML = data.map(item =>
+      searchMode === 'books'
+        ? `<div class="result-item" onclick="showBook('${esc(item.id)}')">
+             <div class="r-title">${esc(item.title)}</div>
+             <div class="r-sub">${esc(item.author || 'Unknown author')}</div>
+           </div>`
+        : searchMode === 'professors'
+        ? `<div class="result-item" onclick="showProfessor('${esc(item.id)}')">
+             <div class="r-title">${esc(item.name)}</div>
+             <div class="r-sub">Current faculty</div>
+           </div>`
+        : `<div class="result-item" onclick="showLecture('${esc(item.id)}')">
+             <div class="r-title">${esc(item.title)}</div>
+             <div class="r-sub">${esc(item.professor || 'Unknown lecturer')}${item.dates ? ' &bull; ' + esc(item.dates) : ''}</div>
+           </div>`
+    ).join('');
+  } catch (err) {
+    listEl.innerHTML = `<div class="no-results error-msg">Error: ${err.message}</div>`;
+  }
+}
+
+async function seeAll() {
+  document.getElementById('search-input').value = '';
+  const listEl   = document.getElementById('results-list');
+  const detailEl = document.getElementById('detail');
+  listEl.innerHTML   = '<div class="no-results loading">Loading…</div>';
+  detailEl.innerHTML = '';
+
+  const ep = searchMode === 'books'
+    ? '/api/books?all=1'
+    : searchMode === 'professors'
+    ? '/api/professors?all=1'
+    : '/api/lectures?all=1';
+
+  try {
+    const data = await (await fetch(ep)).json();
+    if (!data.length) { listEl.innerHTML = '<div class="no-results">Nothing found.</div>'; return; }
     listEl.innerHTML = data.map(item =>
       searchMode === 'books'
         ? `<div class="result-item" onclick="showBook('${esc(item.id)}')">
@@ -925,11 +963,16 @@ async function submitEditModal() {
 //  BOOK FORM
 // ════════════════════════════════════════════════════════════════════════════
 
-function generateBookId(author, title) {
-  const lastName = (author.includes(',') ? author.split(',')[0] : author).trim();
-  const authorPart = lastName
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
-    .replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
+function generateBookId(author, title, isBible) {
+  let authorPart;
+  if (isBible || !author.trim()) {
+    authorPart = 'UNK';
+  } else {
+    const lastName = (author.includes(',') ? author.split(',')[0] : author).trim();
+    authorPart = lastName
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
+  }
 
   let t = title.trim();
   if (/^the\s/i.test(t)) t = t.slice(4);
@@ -950,12 +993,18 @@ async function renderBookForm(data) {
   const isNew = !data;
   document.getElementById('edit-modal-body').innerHTML = `
     ${isNew ? `<div class="form-group">
-      <label>Author<span class="req-star">*</span> <small>— use "Last name, First name" format</small></label>
-      <input class="form-input" id="f-author" value="" placeholder="e.g. Austen, Jane" oninput="updateBookIdPreview()" required />
+      <label>Author <small>— use "Last name, First name" format; leave blank if unknown or multiple authors</small></label>
+      <input class="form-input" id="f-author" value="" placeholder="e.g. Austen, Jane" oninput="updateBookIdPreview()" />
     </div>` : `<div class="form-group">
-      <label>Author<span class="req-star">*</span></label>
-      <input class="form-input" id="f-author" value="${esc(data.author||'')}" required />
+      <label>Author <small>— use "Last name, First name" format; leave blank if unknown or multiple authors</small></label>
+      <input class="form-input" id="f-author" value="${esc(data.author||'')}" />
     </div>`}
+    <div class="form-group">
+      <label class="form-check">
+        <input type="checkbox" id="f-bible" ${data?.is_bible ? 'checked' : ''} onchange="updateBookIdPreview()" />
+        <span>Book of the Bible</span>
+      </label>
+    </div>
     <div class="form-group">
       <label>Title<span class="req-star">*</span></label>
       <input class="form-input" id="f-title" value="${esc(data?.title||'')}"
@@ -977,12 +1026,13 @@ async function renderBookForm(data) {
 }
 
 async function updateBookIdPreview() {
-  const author = document.getElementById('f-author')?.value || '';
-  const title  = document.getElementById('f-title')?.value  || '';
+  const author  = document.getElementById('f-author')?.value || '';
+  const title   = document.getElementById('f-title')?.value  || '';
+  const isBible = document.getElementById('f-bible')?.checked || false;
   const preview = document.getElementById('book-id-preview');
   const warn    = document.getElementById('book-id-warn');
-  if (!author || !title) { preview.textContent = '—'; warn.textContent = ''; return; }
-  const id = generateBookId(author, title);
+  if (!title) { preview.textContent = '—'; warn.textContent = ''; return; }
+  const id = generateBookId(author, title, isBible);
   preview.textContent = id;
   warn.textContent = '';
   if (id.length === 8) {
@@ -992,9 +1042,10 @@ async function updateBookIdPreview() {
 }
 
 async function saveBook() {
-  const author = document.getElementById('f-author').value.trim();
-  const title  = document.getElementById('f-title').value.trim();
-  if (!author || !title) { alert('Author and title are required.'); return; }
+  const author  = document.getElementById('f-author').value.trim();
+  const title   = document.getElementById('f-title').value.trim();
+  const isBible = document.getElementById('f-bible')?.checked || false;
+  if (!title) { alert('Title is required.'); return; }
 
   const genre_ids   = getMultiSelectValues('f-genres');
   const lecture_ids = getTypeaheadValues('f-lectures');
@@ -1002,14 +1053,14 @@ async function saveBook() {
   try {
     if (editingId) {
       await adminFetch(`/api/admin/books/${encodeURIComponent(editingId)}`, {
-        method: 'PUT', body: { title, author, genre_ids, lecture_ids },
+        method: 'PUT', body: { title, author, is_bible: isBible, genre_ids, lecture_ids },
       });
     } else {
-      const id = generateBookId(author, title);
+      const id = generateBookId(author, title, isBible);
       const { exists } = await (await adminFetch(`/api/admin/check-book-id/${id}`)).json();
-      if (exists) { alert(`ID "${id}" already exists. Adjust the author or title slightly.`); return; }
+      if (exists) { alert(`ID "${id}" already exists. Adjust the title slightly.`); return; }
       await adminFetch('/api/admin/books', {
-        method: 'POST', body: { id, title, author, genre_ids, lecture_ids },
+        method: 'POST', body: { id, title, author, is_bible: isBible, genre_ids, lecture_ids },
       });
     }
     closeEditModal();
