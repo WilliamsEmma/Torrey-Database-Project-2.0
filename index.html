@@ -992,6 +992,11 @@ async function renderBookForm(data) {
 
   const isNew = !data;
   document.getElementById('edit-modal-body').innerHTML = `
+    <div class="form-group">
+      <label>Title<span class="req-star">*</span></label>
+      <input class="form-input" id="f-title" value="${esc(data?.title||'')}"
+             ${isNew ? 'oninput="updateBookIdPreview()"' : ''} placeholder="Book title" required />
+    </div>
     ${isNew ? `<div class="form-group">
       <label>Author <small>— use "Last name, First name" format; leave blank if unknown or multiple authors</small></label>
       <input class="form-input" id="f-author" value="" placeholder="e.g. Austen, Jane" oninput="updateBookIdPreview()" />
@@ -1004,11 +1009,6 @@ async function renderBookForm(data) {
         <input type="checkbox" id="f-bible" ${data?.is_bible ? 'checked' : ''} onchange="updateBookIdPreview()" />
         <span>Book of the Bible</span>
       </label>
-    </div>
-    <div class="form-group">
-      <label>Title<span class="req-star">*</span></label>
-      <input class="form-input" id="f-title" value="${esc(data?.title||'')}"
-             ${isNew ? 'oninput="updateBookIdPreview()"' : ''} placeholder="Book title" required />
     </div>
     <div style="display:none">
       <div class="id-preview" id="book-id-preview">${isNew ? '—' : esc(data.id)}</div>
