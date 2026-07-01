@@ -535,7 +535,10 @@ async function seeAll() {
   try {
     const data = await (await fetch(ep)).json();
     if (!data.length) { listEl.innerHTML = '<div class="no-results">Nothing found.</div>'; return; }
-    listEl.innerHTML = data.map(item =>
+    const bibleBtn = searchMode === 'books'
+      ? `<div style="padding:.4rem .6rem .2rem"><button onclick="showBibleBooks()" style="background:transparent;border:1px solid var(--border);color:var(--brown);padding:.3rem .7rem;font-family:Georgia,serif;font-size:.8rem;cursor:pointer;border-radius:2px;">Show Only Bible Books</button></div>`
+      : '';
+    listEl.innerHTML = bibleBtn + data.map(item =>
       searchMode === 'books'
         ? `<div class="result-item" onclick="showBook('${esc(item.id)}')">
              <div class="r-title">${esc(item.title)}</div>
@@ -550,6 +553,26 @@ async function seeAll() {
              <div class="r-title">${esc(item.title)}</div>
              <div class="r-sub">${esc(item.professor || 'Unknown lecturer')}${item.dates ? ' &bull; ' + esc(item.dates) : ''}</div>
            </div>`
+    ).join('');
+  } catch (err) {
+    listEl.innerHTML = `<div class="no-results error-msg">Error: ${err.message}</div>`;
+  }
+}
+
+async function showBibleBooks() {
+  const listEl   = document.getElementById('results-list');
+  const detailEl = document.getElementById('detail');
+  listEl.innerHTML   = '<div class="no-results loading">Loading…</div>';
+  detailEl.innerHTML = '';
+  try {
+    const data = await (await fetch('/api/books?all=1&bible=1')).json();
+    const backBtn = `<div style="padding:.4rem .6rem .2rem"><button onclick="seeAll()" style="background:transparent;border:1px solid var(--border);color:var(--brown);padding:.3rem .7rem;font-family:Georgia,serif;font-size:.8rem;cursor:pointer;border-radius:2px;">← Show All Books</button></div>`;
+    if (!data.length) { listEl.innerHTML = backBtn + '<div class="no-results">No Bible books found.</div>'; return; }
+    listEl.innerHTML = backBtn + data.map(item =>
+      `<div class="result-item" onclick="showBook('${esc(item.id)}')">
+         <div class="r-title">${esc(item.title)}</div>
+         <div class="r-sub">${esc(item.author || '')}</div>
+       </div>`
     ).join('');
   } catch (err) {
     listEl.innerHTML = `<div class="no-results error-msg">Error: ${err.message}</div>`;

@@ -133,9 +133,10 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/api/books', async (req, res) => {
   try {
     const s = `%${req.query.search || ''}%`;
+    const bibleFilter = req.query.bible ? ' AND is_bible = 1' : '';
     const rows = await query(
       `SELECT id, title, Author AS author FROM book
-       WHERE title LIKE ? OR Author LIKE ?
+       WHERE (title LIKE ? OR Author LIKE ?)${bibleFilter}
        ORDER BY title${req.query.all ? '' : ' LIMIT 50'}`,
       [s, s]
     );
