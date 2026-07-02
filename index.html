@@ -577,9 +577,13 @@ const BIBLE_ORDER = [
 ];
 
 function bibleBookIndex(title) {
-  const t = title.toLowerCase();
-  const idx = BIBLE_ORDER.findIndex(b => t.includes(b.toLowerCase()));
-  return idx === -1 ? Infinity : idx;
+  const t = title.trim().toLowerCase();
+  let bestIdx = -1, bestLen = 0;
+  BIBLE_ORDER.forEach((b, i) => {
+    const bl = b.toLowerCase();
+    if (t.includes(bl) && bl.length > bestLen) { bestIdx = i; bestLen = bl.length; }
+  });
+  return bestIdx === -1 ? Infinity : bestIdx;
 }
 
 async function showBibleBooks() {
