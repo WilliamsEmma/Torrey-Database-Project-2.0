@@ -502,7 +502,7 @@ async function doSearch() {
       searchMode === 'books'
         ? `<div class="result-item" onclick="showBook('${esc(item.id)}')">
              <div class="r-title">${esc(item.title)}</div>
-             <div class="r-sub">${esc(item.author || 'Unknown author')}</div>
+             <div class="r-sub">${esc(item.author || '')}</div>
            </div>`
         : searchMode === 'professors'
         ? `<div class="result-item" onclick="showProfessor('${esc(item.id)}')">
@@ -542,7 +542,7 @@ async function seeAll() {
       searchMode === 'books'
         ? `<div class="result-item" onclick="showBook('${esc(item.id)}')">
              <div class="r-title">${esc(item.title)}</div>
-             <div class="r-sub">${esc(item.author || 'Unknown author')}</div>
+             <div class="r-sub">${esc(item.author || '')}</div>
            </div>`
         : searchMode === 'professors'
         ? `<div class="result-item" onclick="showProfessor('${esc(item.id)}')">
@@ -559,6 +559,29 @@ async function seeAll() {
   }
 }
 
+const BIBLE_ORDER = [
+  'Genesis','Exodus','Leviticus','Numbers','Deuteronomy',
+  'Joshua','Judges','Ruth','1 Samuel','2 Samuel',
+  '1 Kings','2 Kings','1 Chronicles','2 Chronicles',
+  'Ezra','Nehemiah','Esther','Job','Psalms','Proverbs',
+  'Ecclesiastes','Song of Solomon','Song of Songs','Isaiah','Jeremiah',
+  'Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos',
+  'Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah',
+  'Haggai','Zechariah','Malachi',
+  'Matthew','Mark','Luke','John','Acts','Romans',
+  '1 Corinthians','2 Corinthians','Galatians','Ephesians',
+  'Philippians','Colossians','1 Thessalonians','2 Thessalonians',
+  '1 Timothy','2 Timothy','Titus','Philemon','Hebrews',
+  'James','1 Peter','2 Peter','1 John','2 John','3 John',
+  'Jude','Revelation'
+];
+
+function bibleBookIndex(title) {
+  const t = title.toLowerCase();
+  const idx = BIBLE_ORDER.findIndex(b => t.includes(b.toLowerCase()));
+  return idx === -1 ? Infinity : idx;
+}
+
 async function showBibleBooks() {
   const listEl   = document.getElementById('results-list');
   const detailEl = document.getElementById('detail');
@@ -566,6 +589,7 @@ async function showBibleBooks() {
   detailEl.innerHTML = '';
   try {
     const data = await (await fetch('/api/books?all=1&bible=1')).json();
+    data.sort((a, b) => bibleBookIndex(a.title) - bibleBookIndex(b.title));
     const backBtn = `<div style="padding:.4rem .6rem .2rem"><button onclick="seeAll()" style="background:transparent;border:1px solid var(--border);color:var(--brown);padding:.3rem .7rem;font-family:Georgia,serif;font-size:.8rem;cursor:pointer;border-radius:2px;">← Show All Books</button></div>`;
     if (!data.length) { listEl.innerHTML = backBtn + '<div class="no-results">No Bible books found.</div>'; return; }
     listEl.innerHTML = backBtn + data.map(item =>
@@ -618,7 +642,7 @@ async function showBook(id) {
       <div class="detail-card">
         <div class="detail-header">
           <h2>${esc(b.title)}</h2>
-          <div class="subtitle">${esc(b.author || 'Unknown author')}</div>
+          <div class="subtitle">${esc(b.author || '')}</div>
         </div>
         <div class="detail-body">
           ${professorSection}${lectureSection}
