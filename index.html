@@ -811,11 +811,7 @@ async function submitLogin() {
     document.getElementById('admin-panel').classList.add('visible');
     document.getElementById('admin-header-btn').classList.add('active');
     document.getElementById('admin-header-btn').textContent = 'Admin ✓';
-    try {
-      const limRes = await adminFetch('/api/admin/column-limits');
-      colLimits = await limRes.json();
-      console.log('[colLimits] status:', limRes.status, 'data:', JSON.stringify(colLimits));
-    } catch(e) { console.error('[colLimits] fetch failed:', e); colLimits = {}; }
+    colLimits = await adminFetch('/api/admin/column-limits').then(r => r.json()).catch(() => ({}));
     loadAdminTab(adminTab);
   } catch (err) {
     document.getElementById('login-error').textContent = 'Connection error.';
@@ -1052,15 +1048,15 @@ async function renderBookForm(data) {
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-group">
       <label>Title<span class="req-star">*</span></label>
-      <input class="form-input" id="f-title" value="${esc(data?.title||'')}"
+      <input class="form-input" id="f-title" value="${esc(data?.title||'')}" maxlength="50"
              ${isNew ? 'oninput="updateBookIdPreview()"' : ''} placeholder="Book title" required />
     </div>
     ${isNew ? `<div class="form-group">
       <label>Author <small>— use "Last name, First name" format; leave blank if unknown or multiple authors</small></label>
-      <input class="form-input" id="f-author" value="" placeholder="e.g. Austen, Jane" oninput="updateBookIdPreview()" />
+      <input class="form-input" id="f-author" value="" maxlength="45" placeholder="e.g. Austen, Jane" oninput="updateBookIdPreview()" />
     </div>` : `<div class="form-group">
       <label>Author <small>— use "Last name, First name" format; leave blank if unknown or multiple authors</small></label>
-      <input class="form-input" id="f-author" value="${esc(data.author||'')}" />
+      <input class="form-input" id="f-author" value="${esc(data.author||'')}" maxlength="45" />
     </div>`}
     <div class="form-group">
       <label class="form-check">
@@ -1140,7 +1136,7 @@ async function renderProfessorForm(data) {
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-group">
       <label>Name<span class="req-star">*</span></label>
-      <input class="form-input" id="f-name" value="${esc(data?.name||'')}" placeholder="Full name" required />
+      <input class="form-input" id="f-name" value="${esc(data?.name||'')}" maxlength="45" placeholder="Full name" required />
     </div>
     <div style="display:none">
       <div class="id-preview" id="prof-id-preview">${!data ? 'Loading…' : esc(data.id)}</div>
@@ -1155,7 +1151,7 @@ async function renderProfessorForm(data) {
     <div id="current-fields" style="${isCurrent ? '' : 'display:none'}">
       <div class="form-group">
         <label>Office Hours URL</label>
-        <input class="form-input" id="f-office" value="${esc(data?.office_hours||'')}" placeholder="https://…" />
+        <input class="form-input" id="f-office" value="${esc(data?.office_hours||'')}" maxlength="150" placeholder="https://…" />
       </div>
       <div class="form-group">
         <label>Genre Specialties</label>
@@ -1214,11 +1210,11 @@ async function renderLectureForm(data) {
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-group">
       <label>Title<span class="req-star">*</span></label>
-      <input class="form-input" id="f-title" value="${esc(data?.title||'')}" placeholder="Lecture title" required />
+      <input class="form-input" id="f-title" value="${esc(data?.title||'')}" maxlength="125" placeholder="Lecture title" required />
     </div>
     <div class="form-group">
       <label>Date (e.g. Fall 2024)</label>
-      <input class="form-input" id="f-dates" value="${esc(data?.dates||'')}" placeholder="Fall 2024" />
+      <input class="form-input" id="f-dates" value="${esc(data?.dates||'')}" maxlength="11" placeholder="Fall 2024" />
     </div>
     <div class="form-group">
       <label>Professor<span class="req-star">*</span></label>
@@ -1226,7 +1222,7 @@ async function renderLectureForm(data) {
     </div>
     <div class="form-group">
       <label>Google Drive Link</label>
-      <input class="form-input" id="f-link" value="${esc(data?.link||'')}" placeholder="https://drive.google.com/…" />
+      <input class="form-input" id="f-link" value="${esc(data?.link||'')}" maxlength="100" placeholder="https://drive.google.com/…" />
     </div>
     <div style="display:none">
       <div class="id-preview" id="lec-id-preview">${!data ? 'Loading…' : esc(data.id)}</div>
@@ -1286,7 +1282,7 @@ async function renderGenreForm(data) {
   document.getElementById('edit-modal-body').innerHTML = `
     <div class="form-group">
       <label>Genre Name<span class="req-star">*</span></label>
-      <input class="form-input" id="f-name" value="${esc(data?.name||'')}" placeholder="e.g. political philosophy" required />
+      <input class="form-input" id="f-name" value="${esc(data?.name||'')}" maxlength="30" placeholder="e.g. political philosophy" required />
     </div>
     <div style="display:none">
       <div class="id-preview" id="genre-id-preview">${!data ? 'Loading…' : esc(data.id)}</div>
@@ -1624,13 +1620,11 @@ document.addEventListener('click', e => {
 // Apply maxlength to inputs based on DB column limits.
 // map: { inputId: [tableName, columnName] }
 function applyMaxlengths(map) {
-  console.log('[applyMaxlengths] colLimits:', JSON.stringify(colLimits), 'map:', JSON.stringify(map));
   for (const [inputId, [table, col]] of Object.entries(map)) {
     const tblData = colLimits[table] || {};
     const key   = Object.keys(tblData).find(k => k.toLowerCase() === col.toLowerCase());
     const limit = key ? Number(tblData[key]) : 0;
     const el    = document.getElementById(inputId);
-    console.log(`  ${inputId} → ${table}.${col}: limit=${limit}, el=${el ? 'found' : 'NOT FOUND'}`);
     if (limit && el) el.maxLength = limit;
   }
 }
