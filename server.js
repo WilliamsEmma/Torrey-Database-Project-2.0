@@ -341,8 +341,11 @@ app.get('/api/admin/column-limits', adminAuth, async (req, res) => {
     `);
     const limits = {};
     for (const r of rows) {
-      if (!limits[r.TABLE_NAME]) limits[r.TABLE_NAME] = {};
-      limits[r.TABLE_NAME][r.COLUMN_NAME] = r.CHARACTER_MAXIMUM_LENGTH;
+      const tbl = r.TABLE_NAME || r.table_name;
+      const col = r.COLUMN_NAME || r.column_name;
+      const len = Number(r.CHARACTER_MAXIMUM_LENGTH ?? r.character_maximum_length);
+      if (!limits[tbl]) limits[tbl] = {};
+      limits[tbl][col] = len;
     }
     res.json(limits);
   } catch (err) { res.status(500).json({ error: err.message }); }

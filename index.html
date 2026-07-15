@@ -811,7 +811,7 @@ async function submitLogin() {
     document.getElementById('admin-panel').classList.add('visible');
     document.getElementById('admin-header-btn').classList.add('active');
     document.getElementById('admin-header-btn').textContent = 'Admin ✓';
-    adminFetch('/api/admin/column-limits').then(r => { colLimits = r; }).catch(() => {});
+    colLimits = await adminFetch('/api/admin/column-limits').catch(() => ({}));
     loadAdminTab(adminTab);
   } catch (err) {
     document.getElementById('login-error').textContent = 'Connection error.';
@@ -1621,7 +1621,10 @@ document.addEventListener('click', e => {
 // map: { inputId: [tableName, columnName] }
 function applyMaxlengths(map) {
   for (const [inputId, [table, col]] of Object.entries(map)) {
-    const limit = colLimits[table]?.[col];
+    const tblData = colLimits[table] || {};
+    // case-insensitive column lookup
+    const key   = Object.keys(tblData).find(k => k.toLowerCase() === col.toLowerCase());
+    const limit = key ? Number(tblData[key]) : 0;
     const el    = document.getElementById(inputId);
     if (limit && el) el.maxLength = limit;
   }
