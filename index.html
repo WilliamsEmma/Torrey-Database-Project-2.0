@@ -811,7 +811,11 @@ async function submitLogin() {
     document.getElementById('admin-panel').classList.add('visible');
     document.getElementById('admin-header-btn').classList.add('active');
     document.getElementById('admin-header-btn').textContent = 'Admin ✓';
-    colLimits = await adminFetch('/api/admin/column-limits').then(r => r.json()).catch(() => ({}));
+    try {
+      const limRes = await adminFetch('/api/admin/column-limits');
+      colLimits = await limRes.json();
+      console.log('[colLimits] status:', limRes.status, 'data:', JSON.stringify(colLimits));
+    } catch(e) { console.error('[colLimits] fetch failed:', e); colLimits = {}; }
     loadAdminTab(adminTab);
   } catch (err) {
     document.getElementById('login-error').textContent = 'Connection error.';
@@ -1620,12 +1624,13 @@ document.addEventListener('click', e => {
 // Apply maxlength to inputs based on DB column limits.
 // map: { inputId: [tableName, columnName] }
 function applyMaxlengths(map) {
+  console.log('[applyMaxlengths] colLimits:', JSON.stringify(colLimits), 'map:', JSON.stringify(map));
   for (const [inputId, [table, col]] of Object.entries(map)) {
     const tblData = colLimits[table] || {};
-    // case-insensitive column lookup
     const key   = Object.keys(tblData).find(k => k.toLowerCase() === col.toLowerCase());
     const limit = key ? Number(tblData[key]) : 0;
     const el    = document.getElementById(inputId);
+    console.log(`  ${inputId} → ${table}.${col}: limit=${limit}, el=${el ? 'found' : 'NOT FOUND'}`);
     if (limit && el) el.maxLength = limit;
   }
 }
