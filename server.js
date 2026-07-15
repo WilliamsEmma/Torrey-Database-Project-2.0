@@ -327,6 +327,28 @@ app.get('/api/admin/ref/lectures', adminAuth, async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+//  ADMIN: COLUMN LIMITS
+// ════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/admin/column-limits', adminAuth, async (req, res) => {
+  try {
+    const rows = await query(`
+      SELECT TABLE_NAME, COLUMN_NAME, CHARACTER_MAXIMUM_LENGTH
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND CHARACTER_MAXIMUM_LENGTH IS NOT NULL
+        AND TABLE_NAME IN ('book','lectures','professors','genre','current')
+    `);
+    const limits = {};
+    for (const r of rows) {
+      if (!limits[r.TABLE_NAME]) limits[r.TABLE_NAME] = {};
+      limits[r.TABLE_NAME][r.COLUMN_NAME] = r.CHARACTER_MAXIMUM_LENGTH;
+    }
+    res.json(limits);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 //  ADMIN: ID GENERATION
 // ════════════════════════════════════════════════════════════════════════════
 

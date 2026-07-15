@@ -759,6 +759,7 @@ let adminToken = null;
 let adminTab   = 'books';
 let adminListData = [];   // current full list for the active tab
 let refCache = {};        // cached reference lists
+let colLimits = {};       // column character limits from DB schema
 
 function adminHeaderClick() {
   if (adminToken) adminLogout();
@@ -810,6 +811,7 @@ async function submitLogin() {
     document.getElementById('admin-panel').classList.add('visible');
     document.getElementById('admin-header-btn').classList.add('active');
     document.getElementById('admin-header-btn').textContent = 'Admin ✓';
+    adminFetch('/api/admin/column-limits').then(r => { colLimits = r; }).catch(() => {});
     loadAdminTab(adminTab);
   } catch (err) {
     document.getElementById('login-error').textContent = 'Connection error.';
@@ -1075,6 +1077,7 @@ async function renderBookForm(data) {
       ${buildTypeaheadSelect('f-lectures', allLectures.map(l => ({ id: l.id, label: `${l.title} (${l.dates||''})` })), selLectures)}
     </div>
     <div class="req-note">* Required</div>`;
+  applyMaxlengths({ 'f-title': ['book','title'], 'f-author': ['book','Author'] });
 }
 
 async function updateBookIdPreview() {
@@ -1157,6 +1160,7 @@ async function renderProfessorForm(data) {
     </div>
     <div class="req-note">* Required</div>`;
 
+  applyMaxlengths({ 'f-name': ['professors','professors_name'], 'f-office': ['current','office_hours'] });
   if (!data) {
     nextId('professor').then(id => {
       const el = document.getElementById('prof-id-preview');
@@ -1215,7 +1219,6 @@ async function renderLectureForm(data) {
     <div class="form-group">
       <label>Professor<span class="req-star">*</span></label>
       ${buildSingleTypeahead('f-professor', allProfs.map(p => ({ id: p.id, label: p.name })), data?.professors_id || '', { allowCreate: true })}
-      <div style="font-size:.72rem;color:var(--admin-muted);margin-top:.3rem;font-style:italic;">If a new guest lecturer, you will first need to add them as a professor that is not current faculty.</div>
     </div>
     <div class="form-group">
       <label>Google Drive Link</label>
@@ -1230,6 +1233,7 @@ async function renderLectureForm(data) {
     </div>
     <div class="req-note">* Required</div>`;
 
+  applyMaxlengths({ 'f-title': ['lectures','title'], 'f-dates': ['lectures','dates'], 'f-link': ['lectures','link'] });
   if (!data) {
     nextId('lecture').then(id => {
       const el = document.getElementById('lec-id-preview');
@@ -1293,6 +1297,7 @@ async function renderGenreForm(data) {
     </div>
     <div class="req-note">* Required</div>`;
 
+  applyMaxlengths({ 'f-name': ['genre','genre_name'] });
   if (!data) {
     nextId('genre').then(id => {
       const el = document.getElementById('genre-id-preview');
@@ -1611,6 +1616,16 @@ document.addEventListener('click', e => {
 // ════════════════════════════════════════════════════════════════════════════
 //  UTILITIES
 // ════════════════════════════════════════════════════════════════════════════
+
+// Apply maxlength to inputs based on DB column limits.
+// map: { inputId: [tableName, columnName] }
+function applyMaxlengths(map) {
+  for (const [inputId, [table, col]] of Object.entries(map)) {
+    const limit = colLimits[table]?.[col];
+    const el    = document.getElementById(inputId);
+    if (limit && el) el.maxLength = limit;
+  }
+}
 
 function esc(str) {
   if (str == null) return '';
