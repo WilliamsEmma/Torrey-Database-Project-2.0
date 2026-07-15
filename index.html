@@ -318,6 +318,7 @@
     .ts-option { padding:.38rem .7rem; font-size:.78rem; color:var(--admin-text); cursor:pointer; transition:background .1s; }
     .ts-option:hover { background:var(--admin-bg); color:var(--admin-accent); }
     .ts-no-results { padding:.38rem .7rem; font-size:.78rem; color:var(--admin-muted); font-style:italic; }
+    .ts-create-option { color:var(--admin-accent); border-top:1px solid var(--admin-border); font-style:italic; }
 
     /* ── Admin login modal ─────────────────────────────────────────────────── */
     #login-modal .modal-box { max-width:340px; }
@@ -1213,7 +1214,7 @@ async function renderLectureForm(data) {
     </div>
     <div class="form-group">
       <label>Professor<span class="req-star">*</span></label>
-      ${buildSingleTypeahead('f-professor', allProfs.map(p => ({ id: p.id, label: p.name })), data?.professors_id || '')}
+      ${buildSingleTypeahead('f-professor', allProfs.map(p => ({ id: p.id, label: p.name })), data?.professors_id || '', { allowCreate: true })}
       <div style="font-size:.72rem;color:var(--admin-muted);margin-top:.3rem;font-style:italic;">If a new guest lecturer, you will first need to add them as a professor that is not current faculty.</div>
     </div>
     <div class="form-group">
@@ -1506,13 +1507,14 @@ function getTypeaheadValues(name) {
 // ── Single-select typeahead (one value, e.g. professor on a lecture) ─────────
 const stCache = {};
 
-function buildSingleTypeahead(name, items, selectedId) {
+function buildSingleTypeahead(name, items, selectedId, opts = {}) {
   stCache[name] = items;
   const sel = selectedId ? items.find(i => String(i.id) === String(selectedId)) : null;
   const chipHtml = sel
     ? `<span class="ts-chip">${esc(sel.label)}<button type="button" class="ts-chip-remove" data-name="${name}" onclick="stClear(this)">×</button></span>`
     : '';
-  return `<div class="ts-wrap" data-name="${name}" data-selected="${sel ? esc(String(sel.id)) : ''}" data-single="1">
+  const allowCreate = opts.allowCreate ? ' data-allow-create="1"' : '';
+  return `<div class="ts-wrap" data-name="${name}" data-selected="${sel ? esc(String(sel.id)) : ''}" data-single="1"${allowCreate}>
     <input class="ts-input" id="st-input-${name}" type="text"
            placeholder="Type to search…"
            oninput="stSearch(this,'${name}')" onfocus="stSearch(this,'${name}')"
@@ -1524,13 +1526,22 @@ function buildSingleTypeahead(name, items, selectedId) {
 
 function stSearch(input, name) {
   const q     = input.value.toLowerCase();
+  const qRaw  = input.value.trim();
   const items = stCache[name] || [];
   const drop  = document.getElementById(`st-drop-${name}`);
-  if (!q) { drop.style.display = 'none'; return; }
+  if (!q.trim()) { drop.style.display = 'none'; return; }
   const matches = items.filter(i => i.label.toLowerCase().includes(q)).slice(0, 15);
-  drop.innerHTML = matches.length
-    ? matches.map(i => `<div class="ts-option" data-id="${esc(String(i.id))}" data-label="${esc(i.label)}" data-name="${name}" onmousedown="stSelect(this)">${esc(i.label)}</div>`).join('')
-    : `<div class="ts-no-results">No results</div>`;
+  const wrap = document.querySelector(`.ts-wrap[data-name="${name}"][data-single]`);
+  const allowCreate = wrap && wrap.dataset.allowCreate;
+  let html = matches.map(i => `<div class="ts-option" data-id="${esc(String(i.id))}" data-label="${esc(i.label)}" data-name="${name}" onmousedown="stSelect(this)">${esc(i.label)}</div>`).join('');
+  if (!html) html = `<div class="ts-no-results">No results</div>`;
+  if (allowCreate && qRaw) {
+    const exactMatch = items.some(i => i.label.toLowerCase() === q);
+    if (!exactMatch) {
+      html += `<div class="ts-option ts-create-option" data-name="${name}" onmousedown="stCreateNew('${name}')">＋ Create new professor: "${esc(qRaw)}"</div>`;
+    }
+  }
+  drop.innerHTML = html;
   drop.style.display = '';
 }
 
@@ -1545,6 +1556,32 @@ function stSelect(optEl) {
   document.getElementById(`st-chip-${name}`).innerHTML =
     `<span class="ts-chip">${esc(label)}<button type="button" class="ts-chip-remove" data-name="${name}" onclick="stClear(this)">×</button></span>`;
   document.getElementById(`st-drop-${name}`).style.display = 'none';
+}
+
+async function stCreateNew(name) {
+  const input   = document.getElementById(`st-input-${name}`);
+  const profName = input.value.trim();
+  if (!profName) return;
+  try {
+    const idRes = await fetch('/api/admin/next-id/professor', { headers: { 'x-admin-token': adminToken } });
+    const { id } = await idRes.json();
+    const createRes = await fetch('/api/admin/professors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+      body: JSON.stringify({ id, name: profName, is_current: false, genre_ids: [] })
+    });
+    if (!createRes.ok) throw new Error('Failed to create professor');
+    const newProf = { id, label: profName };
+    stCache[name] = [...(stCache[name] || []), newProf];
+    const wrap = document.querySelector(`.ts-wrap[data-name="${name}"][data-single]`);
+    wrap.dataset.selected = id;
+    input.style.display = 'none';
+    document.getElementById(`st-chip-${name}`).innerHTML =
+      `<span class="ts-chip">${esc(profName)}<button type="button" class="ts-chip-remove" data-name="${name}" onclick="stClear(this)">×</button></span>`;
+    document.getElementById(`st-drop-${name}`).style.display = 'none';
+  } catch (err) {
+    alert('Error creating professor: ' + err.message);
+  }
 }
 
 function stClear(btn) {
