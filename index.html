@@ -811,7 +811,7 @@ async function submitLogin() {
     document.getElementById('admin-panel').classList.add('visible');
     document.getElementById('admin-header-btn').classList.add('active');
     document.getElementById('admin-header-btn').textContent = 'Admin ✓';
-    colLimits = await adminFetch('/api/admin/column-limits').catch(() => ({}));
+    colLimits = await adminFetch('/api/admin/column-limits').then(r => r.json()).catch(() => ({}));
     loadAdminTab(adminTab);
   } catch (err) {
     document.getElementById('login-error').textContent = 'Connection error.';
