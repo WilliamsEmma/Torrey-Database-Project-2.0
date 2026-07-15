@@ -1233,7 +1233,7 @@ async function renderLectureForm(data) {
     </div>
     <div class="req-note">* Required</div>`;
 
-  applyMaxlengths({ 'f-title': ['lectures','title'], 'f-dates': ['lectures','dates'], 'f-link': ['lectures','link'] });
+  applyMaxlengths({ 'f-title': ['lectures','title'], 'f-dates': ['lectures','dates'], 'f-link': ['lectures','link'], 'st-input-f-professor': ['professors','professors_name'] });
   if (!data) {
     nextId('lecture').then(id => {
       const el = document.getElementById('lec-id-preview');
