@@ -341,7 +341,6 @@
         <button id="btn-books" class="active" onclick="setMode('books')">Search Books</button>
         <button id="btn-professors" onclick="setMode('professors')">Search Professors</button>
         <button id="btn-lectures" onclick="setMode('lectures')">Search Lectures</button>
-        <button id="btn-genres" onclick="setMode('genres')">Search Genres</button>
       </div>
       <div class="search-bar">
         <input id="search-input" type="text" placeholder="Search by title or author…" autocomplete="off" />
@@ -470,7 +469,6 @@ function setMode(m) {
   document.getElementById('btn-books').classList.toggle('active', m === 'books');
   document.getElementById('btn-professors').classList.toggle('active', m === 'professors');
   document.getElementById('btn-lectures').classList.toggle('active', m === 'lectures');
-  document.getElementById('btn-genres').classList.toggle('active', m === 'genres');
   document.getElementById('search-input').placeholder =
     m === 'books'      ? 'Search by title or author…' :
     m === 'professors' ? 'Search by professor name…'  :
@@ -673,7 +671,7 @@ async function showProfessor(id) {
       ? `<div class="section">
            <div class="section-title">Areas of Speciality</div>
            <div style="display:flex;flex-wrap:wrap;gap:.4rem">
-             ${p.genres.map(g => `<span style="background:var(--tag-bg);color:var(--tag-text);font-size:.8rem;padding:.25rem .6rem;border-radius:3px;border:1px solid var(--border)">${esc(g.genre_name)}</span>`).join('')}
+             ${p.genres.map(g => `<span class="book-chip" onclick="showGenre('${esc(g.genre_id)}')" style="font-size:.8rem;padding:.25rem .6rem">${esc(g.genre_name)}</span>`).join('')}
            </div>
          </div>` : '';
 
