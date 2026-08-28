@@ -341,6 +341,7 @@
         <button id="btn-books" class="active" onclick="setMode('books')">Search Books</button>
         <button id="btn-professors" onclick="setMode('professors')">Search Professors</button>
         <button id="btn-lectures" onclick="setMode('lectures')">Search Lectures</button>
+        <button id="btn-genres" onclick="setMode('genres')">Search Genres</button>
       </div>
       <div class="search-bar">
         <input id="search-input" type="text" placeholder="Search by title or author…" autocomplete="off" />
@@ -469,9 +470,11 @@ function setMode(m) {
   document.getElementById('btn-books').classList.toggle('active', m === 'books');
   document.getElementById('btn-professors').classList.toggle('active', m === 'professors');
   document.getElementById('btn-lectures').classList.toggle('active', m === 'lectures');
+  document.getElementById('btn-genres').classList.toggle('active', m === 'genres');
   document.getElementById('search-input').placeholder =
     m === 'books'      ? 'Search by title or author…' :
     m === 'professors' ? 'Search by professor name…'  :
+    m === 'genres'     ? 'Search by genre name…'      :
                          'Search by title or lecturer…';
   document.getElementById('results-list').innerHTML = '';
   document.getElementById('detail').innerHTML = '';
@@ -494,6 +497,8 @@ async function doSearch() {
     ? `/api/books?search=${encodeURIComponent(q)}`
     : searchMode === 'professors'
     ? `/api/professors?search=${encodeURIComponent(q)}`
+    : searchMode === 'genres'
+    ? `/api/genres?search=${encodeURIComponent(q)}`
     : `/api/lectures?search=${encodeURIComponent(q)}`;
 
   try {
@@ -509,6 +514,10 @@ async function doSearch() {
         ? `<div class="result-item" onclick="showProfessor('${esc(item.id)}')">
              <div class="r-title">${esc(item.name)}</div>
              <div class="r-sub">Current faculty</div>
+           </div>`
+        : searchMode === 'genres'
+        ? `<div class="result-item" onclick="showGenre('${esc(item.id)}')">
+             <div class="r-title">${esc(item.name)}</div>
            </div>`
         : `<div class="result-item" onclick="showLecture('${esc(item.id)}')">
              <div class="r-title">${esc(item.title)}</div>
@@ -531,6 +540,8 @@ async function seeAll() {
     ? '/api/books?all=1'
     : searchMode === 'professors'
     ? '/api/professors?all=1'
+    : searchMode === 'genres'
+    ? '/api/genres?all=1'
     : '/api/lectures?all=1';
 
   try {
@@ -549,6 +560,10 @@ async function seeAll() {
         ? `<div class="result-item" onclick="showProfessor('${esc(item.id)}')">
              <div class="r-title">${esc(item.name)}</div>
              <div class="r-sub">Current faculty</div>
+           </div>`
+        : searchMode === 'genres'
+        ? `<div class="result-item" onclick="showGenre('${esc(item.id)}')">
+             <div class="r-title">${esc(item.name)}</div>
            </div>`
         : `<div class="result-item" onclick="showLecture('${esc(item.id)}')">
              <div class="r-title">${esc(item.title)}</div>
@@ -615,18 +630,6 @@ async function showBook(id) {
   window.scrollTo({ top: detailEl.offsetTop - 20, behavior: 'smooth' });
   try {
     const b = await (await fetch(`/api/books/${encodeURIComponent(id)}`)).json();
-    const professorSection = b.connectedProfessors.length
-      ? `<div class="section">
-           <div class="section-title">Connected Faculty</div>
-           <div class="professor-list">
-             ${b.connectedProfessors.map(p => `
-               <div class="professor-entry">
-                 <span class="professor-name" onclick="showProfessor('${esc(p.id)}')">${esc(p.name)}</span>
-                 <span class="professor-genres">${p.genres.map(g => esc(g.genre_name)).join(', ')}</span>
-                 ${p.office_hours ? `<a class="oh-link" href="${esc(p.office_hours)}" target="_blank" rel="noopener">Book Office Hours</a>` : ''}
-               </div>`).join('')}
-           </div>
-         </div>` : '';
 
     const lectureSection = b.lectures.length
       ? `<div class="section">
@@ -650,8 +653,8 @@ async function showBook(id) {
           <div class="subtitle">${esc(b.author || '')}</div>
         </div>
         <div class="detail-body">
-          ${professorSection}${lectureSection}
-          ${!professorSection && !lectureSection ? '<div class="loading">No additional information available.</div>' : ''}
+          ${lectureSection}
+          ${!lectureSection ? '<div class="loading">No additional information available.</div>' : ''}
         </div>
       </div>`;
   } catch (err) {
@@ -740,6 +743,52 @@ async function showLecture(id) {
           <div class="subtitle">${metaLine}</div>
         </div>
         <div class="detail-body">${bookSection}</div>
+      </div>`;
+  } catch (err) {
+    detailEl.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;
+  }
+}
+
+async function showGenre(id) {
+  const detailEl = document.getElementById('detail');
+  detailEl.innerHTML = '<div class="loading">Loading…</div>';
+  document.getElementById('results-list').innerHTML = '';
+  window.scrollTo({ top: detailEl.offsetTop - 20, behavior: 'smooth' });
+  try {
+    const g = await (await fetch(`/api/genres/${encodeURIComponent(id)}`)).json();
+
+    const bookSection = g.books.length
+      ? `<div class="section">
+           <div class="section-title">Books (${g.books.length})</div>
+           <div style="display:flex;flex-wrap:wrap;gap:.4rem">
+             ${g.books.map(b =>
+               `<span class="book-chip" onclick="showBook('${esc(b.id)}')" title="${esc(b.author||'')}">${esc(b.title)}</span>`
+             ).join('')}
+           </div>
+         </div>` : '';
+
+    const profSection = g.professors.length
+      ? `<div class="section">
+           <div class="section-title">Faculty</div>
+           <div class="professor-list">
+             ${g.professors.map(p => `
+               <div class="professor-entry">
+                 <span class="professor-name" onclick="showProfessor('${esc(p.id)}')">${esc(p.name)}</span>
+                 ${p.office_hours ? `<a class="oh-link" href="${esc(p.office_hours)}" target="_blank" rel="noopener">Book Office Hours</a>` : ''}
+               </div>`).join('')}
+           </div>
+         </div>` : '';
+
+    detailEl.innerHTML = `
+      <span class="back-btn" onclick="clearDetail()">← Back to results</span>
+      <div class="detail-card">
+        <div class="detail-header">
+          <h2>${esc(g.name)}</h2>
+        </div>
+        <div class="detail-body">
+          ${bookSection}${profSection}
+          ${!bookSection && !profSection ? '<div class="loading">No connected books or faculty.</div>' : ''}
+        </div>
       </div>`;
   } catch (err) {
     detailEl.innerHTML = `<div class="error-msg">Error: ${err.message}</div>`;

@@ -225,6 +225,44 @@ app.get('/api/lectures', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/genres', async (req, res) => {
+  try {
+    const s = `%${req.query.search || ''}%`;
+    const rows = await query(
+      `SELECT genre_id AS id, genre_name AS name FROM genre
+       WHERE genre_name LIKE ?
+       ORDER BY genre_name${req.query.all ? '' : ' LIMIT 50'}`, [s]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/genres/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const [genre] = await query(
+      `SELECT genre_id AS id, genre_name AS name FROM genre WHERE genre_id = ?`, [id]
+    );
+    if (!genre) return res.status(404).json({ error: 'Genre not found' });
+
+    const books = await query(
+      `SELECT b.id, b.title, b.Author AS author FROM book b
+       JOIN book_gen bg ON b.id = bg.book_id
+       WHERE bg.genre_id = ? ORDER BY b.title`, [id]
+    );
+
+    const professors = await query(
+      `SELECT p.professors_id AS id, p.professors_name AS name, c.office_hours
+       FROM professors p
+       JOIN current_genre cg ON p.professors_id = cg.professors_id
+       JOIN current c ON c.professors_id = p.professors_id
+       WHERE cg.genre_id = ? ORDER BY p.professors_name`, [id]
+    );
+
+    res.json({ ...genre, books, professors });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/lectures/:id', async (req, res) => {
   try {
     const [lec] = await query(
