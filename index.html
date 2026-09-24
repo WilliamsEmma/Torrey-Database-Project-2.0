@@ -11,8 +11,8 @@
       --cream:     #f5f0e8;
       --parchment: #ede6d6;
       --border:    #c9b99a;
-      --navy:     #1d273b;
-      --burgundy:  #7a2030;
+      --navy:      #1d273b;
+      --gold:      #b4975a;
       --text:      #2c1f0e;
       --muted:     #7a6a55;
       --tag-bg:    #e4d8c4;
@@ -24,7 +24,7 @@
       --admin-border:  #3d3530;
       --admin-text:    #e8dfd0;
       --admin-muted:   #9a8a7a;
-      --admin-accent:  #c4783a;
+      --admin-accent:  #b4975a;
       --admin-danger:  #c0392b;
       --admin-width:   500px;
     }
@@ -34,7 +34,7 @@
     header {
       background: var(--navy); color: var(--cream);
       padding: 1.5rem 2rem; text-align: center;
-      border-bottom: 3px solid var(--burgundy); position: relative;
+      border-bottom: 3px solid var(--gold); position: relative;
     }
     header h1 { font-size:1.9rem; font-weight:normal; letter-spacing:.04em; margin-bottom:.25rem; }
     header p  { font-size:.85rem; color:#c9b99a; font-style:italic; }
@@ -74,7 +74,7 @@
     }
     .search-bar input::placeholder { color:var(--muted); font-style:italic; }
     .search-bar button {
-      padding:.75rem 1.25rem; background:var(--burgundy); color:white;
+      padding:.75rem 1.25rem; background:var(--gold); color:white;
       border:none; font-family:Georgia,serif; font-size:.9rem; cursor:pointer; transition:background .15s;
     }
     .search-bar button:hover { background:var(--navy); }
@@ -99,7 +99,7 @@
     .detail-header .subtitle { font-size:.9rem; color:var(--muted); margin-top:.3rem; font-style:italic; }
     .detail-header .office-link {
       display:inline-block; margin-top:.75rem; padding:.4rem .9rem;
-      background:var(--burgundy); color:white; text-decoration:none;
+      background:var(--gold); color:white; text-decoration:none;
       font-size:.85rem; border-radius:3px; font-style:normal;
     }
     .detail-header .office-link:hover { background:var(--navy); }
@@ -116,10 +116,10 @@
     .professor-name:hover { color:var(--navy); }
     .professor-genres { font-size:.8rem; color:var(--muted); font-style:italic; }
     .oh-link {
-      font-size:.78rem; color:var(--burgundy); text-decoration:none;
-      border:1px solid var(--burgundy); border-radius:3px; padding:.1rem .45rem; white-space:nowrap;
+      font-size:.78rem; color:var(--gold); text-decoration:none;
+      border:1px solid var(--gold); border-radius:3px; padding:.1rem .45rem; white-space:nowrap;
     }
-    .oh-link:hover { background:var(--burgundy); color:white; }
+    .oh-link:hover { background:var(--gold); color:white; }
     .lecture-list { display:flex; flex-direction:column; gap:1rem; }
     .lecture-entry { border-left:3px solid var(--border); padding-left:1rem; }
     .lecture-entry .lec-title { font-size:.95rem; color:var(--text); }
@@ -136,7 +136,7 @@
     .back-btn { display:inline-block; margin-bottom:1rem; color:var(--muted); font-size:.85rem; cursor:pointer; text-decoration:underline; }
     .back-btn:hover { color:var(--navy); }
     .loading   { color:var(--muted); font-style:italic; padding:1rem 0; }
-    .error-msg { color:var(--burgundy); font-style:italic; padding:1rem 0; }
+    .error-msg { color:var(--gold); font-style:italic; padding:1rem 0; }
 
     /* ════════════════════════════════════════════════════════════════════════
        ADMIN PANEL
