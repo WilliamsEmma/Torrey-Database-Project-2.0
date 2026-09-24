@@ -11,7 +11,7 @@
       --cream:     #f5f0e8;
       --parchment: #ede6d6;
       --border:    #c9b99a;
-      --brown:     #5c3d1e;
+      --navy:     #1d273b;
       --burgundy:  #7a2030;
       --text:      #2c1f0e;
       --muted:     #7a6a55;
@@ -32,7 +32,7 @@
 
     /* ── Header ────────────────────────────────────────────────────────────── */
     header {
-      background: var(--brown); color: var(--cream);
+      background: var(--navy); color: var(--cream);
       padding: 1.5rem 2rem; text-align: center;
       border-bottom: 3px solid var(--burgundy); position: relative;
     }
@@ -63,7 +63,7 @@
       transition:background .15s,color .15s; border-right:1px solid var(--border);
     }
     .mode-toggle button:last-child { border-right:none; }
-    .mode-toggle button.active { background:var(--brown); color:var(--cream); }
+    .mode-toggle button.active { background:var(--navy); color:var(--cream); }
     .search-bar {
       display:flex; border:1px solid var(--border); border-top:none;
       border-radius:0 0 4px 4px; overflow:hidden; background:white;
@@ -77,7 +77,7 @@
       padding:.75rem 1.25rem; background:var(--burgundy); color:white;
       border:none; font-family:Georgia,serif; font-size:.9rem; cursor:pointer; transition:background .15s;
     }
-    .search-bar button:hover { background:var(--brown); }
+    .search-bar button:hover { background:var(--navy); }
 
     /* ── Results list ──────────────────────────────────────────────────────── */
     #results-list { max-width:700px; margin:.5rem auto 0; padding:0 1rem; }
@@ -95,14 +95,14 @@
     #detail { max-width:860px; margin:2rem auto 4rem; padding:0 1rem; }
     .detail-card { background:white; border:1px solid var(--border); border-radius:4px; box-shadow:0 2px 8px var(--shadow); overflow:hidden; }
     .detail-header { background:var(--parchment); border-bottom:1px solid var(--border); padding:1.5rem 2rem; }
-    .detail-header h2 { font-size:1.5rem; font-weight:normal; color:var(--brown); }
+    .detail-header h2 { font-size:1.5rem; font-weight:normal; color:var(--navy); }
     .detail-header .subtitle { font-size:.9rem; color:var(--muted); margin-top:.3rem; font-style:italic; }
     .detail-header .office-link {
       display:inline-block; margin-top:.75rem; padding:.4rem .9rem;
       background:var(--burgundy); color:white; text-decoration:none;
       font-size:.85rem; border-radius:3px; font-style:normal;
     }
-    .detail-header .office-link:hover { background:var(--brown); }
+    .detail-header .office-link:hover { background:var(--navy); }
     .detail-body { padding:1.5rem 2rem; }
     .section { margin-bottom:2rem; }
     .section:last-child { margin-bottom:0; }
@@ -113,7 +113,7 @@
     .professor-list { display:flex; flex-direction:column; gap:.75rem; }
     .professor-entry { display:flex; align-items:baseline; gap:.75rem; flex-wrap:wrap; }
     .professor-name { color:var(--link); text-decoration:underline; cursor:pointer; font-size:.95rem; }
-    .professor-name:hover { color:var(--brown); }
+    .professor-name:hover { color:var(--navy); }
     .professor-genres { font-size:.8rem; color:var(--muted); font-style:italic; }
     .oh-link {
       font-size:.78rem; color:var(--burgundy); text-decoration:none;
@@ -134,7 +134,7 @@
     }
     .book-chip:hover { background:var(--parchment); }
     .back-btn { display:inline-block; margin-bottom:1rem; color:var(--muted); font-size:.85rem; cursor:pointer; text-decoration:underline; }
-    .back-btn:hover { color:var(--brown); }
+    .back-btn:hover { color:var(--navy); }
     .loading   { color:var(--muted); font-style:italic; padding:1rem 0; }
     .error-msg { color:var(--burgundy); font-style:italic; padding:1rem 0; }
 
@@ -345,7 +345,7 @@
       <div class="search-bar">
         <input id="search-input" type="text" placeholder="Search by title or author…" autocomplete="off" />
         <button onclick="doSearch()">Search</button>
-        <button onclick="seeAll()" style="background:transparent;border:1px solid var(--border);color:var(--brown);padding:.45rem .9rem;font-family:Georgia,serif;font-size:.9rem;cursor:pointer;border-radius:2px;">See All</button>
+        <button onclick="seeAll()" style="background:transparent;border:1px solid var(--border);color:var(--navy);padding:.45rem .9rem;font-family:Georgia,serif;font-size:.9rem;cursor:pointer;border-radius:2px;">See All</button>
       </div>
     </div>
     <div id="results-list"></div>
@@ -546,7 +546,7 @@ async function seeAll() {
     const data = await (await fetch(ep)).json();
     if (!data.length) { listEl.innerHTML = '<div class="no-results">Nothing found.</div>'; return; }
     const bibleBtn = searchMode === 'books'
-      ? `<div style="padding:.4rem .6rem .2rem"><button onclick="showBibleBooks()" style="background:transparent;border:1px solid var(--border);color:var(--brown);padding:.3rem .7rem;font-family:Georgia,serif;font-size:.8rem;cursor:pointer;border-radius:2px;">Show Only Bible Books</button></div>`
+      ? `<div style="padding:.4rem .6rem .2rem"><button onclick="showBibleBooks()" style="background:transparent;border:1px solid var(--border);color:var(--navy);padding:.3rem .7rem;font-family:Georgia,serif;font-size:.8rem;cursor:pointer;border-radius:2px;">Show Only Bible Books</button></div>`
       : '';
     listEl.innerHTML = bibleBtn + data.map(item =>
       searchMode === 'books'
@@ -608,7 +608,7 @@ async function showBibleBooks() {
   try {
     const data = await (await fetch('/api/books?all=1&bible=1')).json();
     data.sort((a, b) => bibleBookIndex(a.title) - bibleBookIndex(b.title));
-    const backBtn = `<div style="padding:.4rem .6rem .2rem"><button onclick="seeAll()" style="background:transparent;border:1px solid var(--border);color:var(--brown);padding:.3rem .7rem;font-family:Georgia,serif;font-size:.8rem;cursor:pointer;border-radius:2px;">← Show All Books</button></div>`;
+    const backBtn = `<div style="padding:.4rem .6rem .2rem"><button onclick="seeAll()" style="background:transparent;border:1px solid var(--border);color:var(--navy);padding:.3rem .7rem;font-family:Georgia,serif;font-size:.8rem;cursor:pointer;border-radius:2px;">← Show All Books</button></div>`;
     if (!data.length) { listEl.innerHTML = backBtn + '<div class="no-results">No Bible books found.</div>'; return; }
     listEl.innerHTML = backBtn + data.map(item =>
       `<div class="result-item" onclick="showBook('${esc(item.id)}')">
