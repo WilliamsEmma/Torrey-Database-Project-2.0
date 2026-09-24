@@ -252,7 +252,7 @@ app.get('/api/genres/:id', async (req, res) => {
     );
 
     const professors = await query(
-      `SELECT p.professors_id AS id, p.professors_name AS name, c.office_hours
+      `SELECT p.professors_id AS id, p.professors_name AS name, p.dir_link, c.office_hours
        FROM professors p
        JOIN current_genre cg ON p.professors_id = cg.professors_id
        JOIN current c ON c.professors_id = p.professors_id
@@ -289,7 +289,7 @@ app.get('/api/professors/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const [professor] = await query(
-      `SELECT p.professors_id AS id, p.professors_name AS name, c.office_hours
+      `SELECT p.professors_id AS id, p.professors_name AS name, p.dir_link, c.office_hours
        FROM professors p JOIN current c ON c.professors_id = p.professors_id
        WHERE p.professors_id = ?`, [id]
     );
@@ -498,14 +498,14 @@ app.delete('/api/admin/books/:id', adminAuth, async (req, res) => {
 app.get('/api/admin/professors', adminAuth, async (req, res) => {
   try {
     const rows = await query(
-      `SELECT p.professors_id AS id, p.professors_name AS name,
+      `SELECT p.professors_id AS id, p.professors_name AS name, p.dir_link,
               CASE WHEN c.professors_id IS NOT NULL THEN 1 ELSE 0 END AS is_current,
               c.office_hours,
               COUNT(DISTINCT cg.genre_id) AS genre_count
        FROM professors p
        LEFT JOIN current c ON c.professors_id = p.professors_id
        LEFT JOIN current_genre cg ON cg.professors_id = p.professors_id
-       GROUP BY p.professors_id, p.professors_name, c.professors_id, c.office_hours
+       GROUP BY p.professors_id, p.professors_name, p.dir_link, c.professors_id, c.office_hours
        ORDER BY p.professors_name`
     );
     res.json(rows);
@@ -515,7 +515,7 @@ app.get('/api/admin/professors', adminAuth, async (req, res) => {
 app.get('/api/admin/professors/:id', adminAuth, async (req, res) => {
   try {
     const [prof] = await query(
-      `SELECT professors_id AS id, professors_name AS name FROM professors WHERE professors_id = ?`,
+      `SELECT professors_id AS id, professors_name AS name, dir_link FROM professors WHERE professors_id = ?`,
       [req.params.id]
     );
     if (!prof) return res.status(404).json({ error: 'Not found' });
@@ -523,6 +523,7 @@ app.get('/api/admin/professors/:id', adminAuth, async (req, res) => {
     const genres = await query(`SELECT genre_id FROM current_genre WHERE professors_id = ?`, [req.params.id]);
     res.json({
       ...prof,
+      dir_link:     prof.dir_link || '',
       is_current:   !!curr,
       office_hours: curr?.office_hours || '',
       genre_ids:    genres.map(g => g.genre_id),
@@ -532,8 +533,8 @@ app.get('/api/admin/professors/:id', adminAuth, async (req, res) => {
 
 app.post('/api/admin/professors', adminAuth, async (req, res) => {
   try {
-    const { id, name, is_current, office_hours, genre_ids = [] } = req.body;
-    await query(`INSERT INTO professors (professors_id, professors_name) VALUES (?, ?)`, [id, name]);
+    const { id, name, is_current, office_hours, dir_link, genre_ids = [] } = req.body;
+    await query(`INSERT INTO professors (professors_id, professors_name, dir_link) VALUES (?, ?, ?)`, [id, name, dir_link || null]);
     if (is_current) {
       await query(`INSERT INTO current (professors_id, office_hours) VALUES (?, ?)`, [id, office_hours || null]);
       for (const gid of genre_ids)
@@ -545,8 +546,8 @@ app.post('/api/admin/professors', adminAuth, async (req, res) => {
 
 app.put('/api/admin/professors/:id', adminAuth, async (req, res) => {
   try {
-    const { name, is_current, office_hours, genre_ids = [] } = req.body;
-    await query(`UPDATE professors SET professors_name = ? WHERE professors_id = ?`, [name, req.params.id]);
+    const { name, is_current, office_hours, dir_link, genre_ids = [] } = req.body;
+    await query(`UPDATE professors SET professors_name = ?, dir_link = ? WHERE professors_id = ?`, [name, dir_link || null, req.params.id]);
     await query(`DELETE FROM current_genre WHERE professors_id = ?`, [req.params.id]);
     await query(`DELETE FROM current WHERE professors_id = ?`,       [req.params.id]);
     if (is_current) {

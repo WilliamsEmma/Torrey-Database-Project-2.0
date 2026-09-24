@@ -700,6 +700,7 @@ async function showProfessor(id) {
           <h2>${esc(p.name)}</h2>
           <div class="subtitle">Current Faculty</div>
           ${p.office_hours ? `<a class="office-link" href="${esc(p.office_hours)}" target="_blank" rel="noopener">Book Office Hours</a>` : ''}
+          ${p.dir_link ? `<a class="office-link" href="${esc(p.dir_link)}" target="_blank" rel="noopener">View Directory Profile</a>` : ''}
         </div>
         <div class="detail-body">${genreSection}${lectureSection}</div>
       </div>`;
@@ -773,6 +774,7 @@ async function showGenre(id) {
                <div class="professor-entry">
                  <span class="professor-name" onclick="showProfessor('${esc(p.id)}')">${esc(p.name)}</span>
                  ${p.office_hours ? `<a class="oh-link" href="${esc(p.office_hours)}" target="_blank" rel="noopener">Book Office Hours</a>` : ''}
+                 ${p.dir_link ? `<a class="oh-link" href="${esc(p.dir_link)}" target="_blank" rel="noopener">View Directory Profile</a>` : ''}
                </div>`).join('')}
            </div>
          </div>` : '';
@@ -1185,6 +1187,10 @@ async function renderProfessorForm(data) {
       <label>Name<span class="req-star">*</span></label>
       <input class="form-input" id="f-name" value="${esc(data?.name||'')}" maxlength="45" placeholder="Full name" required />
     </div>
+    <div class="form-group">
+      <label>Directory Link</label>
+      <input class="form-input" id="f-dirlink" value="${esc(data?.dir_link||'')}" maxlength="150" placeholder="https://…" />
+    </div>
     <div style="display:none">
       <div class="id-preview" id="prof-id-preview">${!data ? 'Loading…' : esc(data.id)}</div>
     </div>
@@ -1207,7 +1213,7 @@ async function renderProfessorForm(data) {
     </div>
     <div class="req-note">* Required</div>`;
 
-  applyMaxlengths({ 'f-name': ['professors','professors_name'], 'f-office': ['current','office_hours'] });
+  applyMaxlengths({ 'f-name': ['professors','professors_name'], 'f-dirlink': ['professors','dir_link'], 'f-office': ['current','office_hours'] });
   if (!data) {
     nextId('professor').then(id => {
       const el = document.getElementById('prof-id-preview');
@@ -1223,6 +1229,7 @@ function toggleProfGenres() {
 
 async function saveProfessor() {
   const name       = document.getElementById('f-name').value.trim();
+  const dir_link   = document.getElementById('f-dirlink').value.trim();
   const is_current = document.getElementById('f-current').checked;
   const office_hours = is_current ? (document.getElementById('f-office')?.value.trim() || '') : '';
   const genre_ids  = is_current ? getMultiSelectValues('f-genres') : [];
@@ -1231,12 +1238,12 @@ async function saveProfessor() {
   try {
     if (editingId) {
       await adminFetch(`/api/admin/professors/${encodeURIComponent(editingId)}`, {
-        method: 'PUT', body: { name, is_current, office_hours, genre_ids },
+        method: 'PUT', body: { name, dir_link, is_current, office_hours, genre_ids },
       });
     } else {
       const id = document.getElementById('prof-id-preview').textContent;
       await adminFetch('/api/admin/professors', {
-        method: 'POST', body: { id, name, is_current, office_hours, genre_ids },
+        method: 'POST', body: { id, name, dir_link, is_current, office_hours, genre_ids },
       });
     }
     closeEditModal();
