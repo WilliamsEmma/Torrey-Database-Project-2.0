@@ -62,7 +62,10 @@ const DB_CONFIG = {
 
 let pool;
 async function getPool() {
-  if (!pool) pool = mysql.createPool(DB_CONFIG);
+  if (!pool) {
+    console.log('[DB] Connecting to', { host: DB_CONFIG.host, port: DB_CONFIG.port, database: DB_CONFIG.database, user: DB_CONFIG.user });
+    pool = mysql.createPool(DB_CONFIG);
+  }
   return pool;
 }
 async function query(sql, params = []) {
