@@ -289,8 +289,9 @@ app.get('/api/professors/:id', async (req, res) => {
   try {
     const id = req.params.id;
     const [professor] = await query(
-      `SELECT p.professors_id AS id, p.professors_name AS name, p.dir_link, c.office_hours
-       FROM professors p JOIN current c ON c.professors_id = p.professors_id
+      `SELECT p.professors_id AS id, p.professors_name AS name, p.dir_link, c.office_hours,
+              CASE WHEN c.professors_id IS NOT NULL THEN 1 ELSE 0 END AS is_current
+       FROM professors p LEFT JOIN current c ON c.professors_id = p.professors_id
        WHERE p.professors_id = ?`, [id]
     );
     if (!professor) return res.status(404).json({ error: 'Professor not found' });

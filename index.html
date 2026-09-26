@@ -500,7 +500,9 @@ async function doSearch() {
     : `/api/lectures?search=${encodeURIComponent(q)}`;
 
   try {
-    const data = await (await fetch(ep)).json();
+    const res  = await fetch(ep);
+    const data = await res.json();
+    if (!res.ok) { listEl.innerHTML = `<div class="no-results error-msg">Error: ${esc(data.error || res.statusText)}</div>`; return; }
     if (!data.length) { listEl.innerHTML = '<div class="no-results">No results found.</div>'; return; }
     listEl.innerHTML = data.map(item =>
       searchMode === 'books'
@@ -543,7 +545,9 @@ async function seeAll() {
     : '/api/lectures?all=1';
 
   try {
-    const data = await (await fetch(ep)).json();
+    const res  = await fetch(ep);
+    const data = await res.json();
+    if (!res.ok) { listEl.innerHTML = `<div class="no-results error-msg">Error: ${esc(data.error || res.statusText)}</div>`; return; }
     if (!data.length) { listEl.innerHTML = '<div class="no-results">Nothing found.</div>'; return; }
     const bibleBtn = searchMode === 'books'
       ? `<div style="padding:.4rem .6rem .2rem"><button onclick="showBibleBooks()" style="background:transparent;border:1px solid var(--border);color:var(--navy);padding:.3rem .7rem;font-family:Georgia,serif;font-size:.8rem;cursor:pointer;border-radius:2px;">Show Only Bible Books</button></div>`
@@ -667,19 +671,22 @@ async function showProfessor(id) {
   window.scrollTo({ top: detailEl.offsetTop - 20, behavior: 'smooth' });
   try {
     const p = await (await fetch(`/api/professors/${encodeURIComponent(id)}`)).json();
-    const genreSection = p.genres.length
+    if (p.error) { detailEl.innerHTML = `<div class="error-msg">${esc(p.error)}</div>`; return; }
+    const genres   = p.genres || [];
+    const lectures = p.lectures || [];
+    const genreSection = genres.length
       ? `<div class="section">
            <div class="section-title">Areas of Speciality</div>
            <div style="display:flex;flex-wrap:wrap;gap:.4rem">
-             ${p.genres.map(g => `<span class="book-chip" onclick="showGenre('${esc(g.genre_id)}')" style="font-size:.8rem;padding:.25rem .6rem">${esc(g.genre_name)}</span>`).join('')}
+             ${genres.map(g => `<span class="book-chip" onclick="showGenre('${esc(g.genre_id)}')" style="font-size:.8rem;padding:.25rem .6rem">${esc(g.genre_name)}</span>`).join('')}
            </div>
          </div>` : '';
 
-    const lectureSection = p.lectures.length
+    const lectureSection = lectures.length
       ? `<div class="section">
-           <div class="section-title">Lectures (${p.lectures.length})</div>
+           <div class="section-title">Lectures (${lectures.length})</div>
            <div class="lecture-list">
-             ${p.lectures.map(l => `
+             ${lectures.map(l => `
                <div class="lecture-entry">
                  ${l.link
                    ? `<a class="lec-title" href="${esc(l.link)}" target="_blank" rel="noopener">${esc(l.title)}</a>`
@@ -698,7 +705,7 @@ async function showProfessor(id) {
       <div class="detail-card">
         <div class="detail-header">
           <h2>${esc(p.name)}</h2>
-          <div class="subtitle">Current Faculty</div>
+          <div class="subtitle">${p.is_current ? 'Current Faculty' : 'Past Faculty'}</div>
           ${p.office_hours ? `<a class="office-link" href="${esc(p.office_hours)}" target="_blank" rel="noopener">Book Office Hours</a>` : ''}
           ${p.dir_link ? `<a class="office-link" href="${esc(p.dir_link)}" target="_blank" rel="noopener">View Directory Profile</a>` : ''}
         </div>
@@ -953,7 +960,12 @@ async function loadAdminTab(tab) {
   const listEl = document.getElementById('ap-list');
   listEl.innerHTML = '<div class="ap-loading">Loading…</div>';
   try {
-    const data = await (await adminFetch(`/api/admin/${tab}`)).json();
+    const res  = await adminFetch(`/api/admin/${tab}`);
+    const data = await res.json();
+    if (!res.ok || !Array.isArray(data)) {
+      listEl.innerHTML = `<div class="ap-loading" style="color:var(--admin-danger)">Error: ${esc(data && data.error ? data.error : res.statusText)}</div>`;
+      return;
+    }
     adminListData = data;
     renderAdminList(data);
   } catch (err) {
